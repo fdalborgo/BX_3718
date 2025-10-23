@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_LoadingModeChange" Id="{bdf76c89-1c98-4edb-9f2e-18c9b359c7a1}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_LoadingModeChange
+VAR_INPUT
+	LoadingModeSelected : eLoadingMode;	
+	LS_AutoMode		: BOOL;
+	LS_ManualMode	: BOOL;
+	LS_SemiAutoMode : BOOL; 
+END_VAR
+VAR_OUTPUT
+	PS_AutoMode		: BOOL;
+	PS_ManualMode	: BOOL;
+	PS_SemiAutoMode : BOOL;
+END_VAR
+VAR_IN_OUT
+	ActualMode : eLoadingMode;
+END_VAR
+VAR
+	RTRIG_AutoMode :  R_TRIG;
+	RTRIG_ManualMode :  R_TRIG;
+	RTRIG_SemiAutoMode :  R_TRIG;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_AutoMode(CLK := LS_AutoMode);
+RTRIG_ManualMode(CLK := LS_ManualMode);
+RTRIG_SemiAutoMode(CLK := LS_SemiAutoMode);
+
+//IF LoadingModeSelected <> ActualMode THEN
+	IF LoadingModeSelected = eLoadingMOde.Auto THEN
+		PS_AutoMode := TRUE;
+		PS_ManualMode := FALSE;
+		PS_SemiAutoMOde := FALSE;
+	ELSIF LoadingModeSelected = eLoadingMOde.Manual THEN
+		PS_AutoMode := FALSE;
+		PS_ManualMode := TRUE;
+		PS_SemiAutoMOde := FALSE;
+	ELSIF LoadingModeSelected = eLoadingMOde.SemiAuto THEN
+		PS_AutoMode := FALSE;
+		PS_ManualMode := FALSE;
+		PS_SemiAutoMOde := TRUE;
+	ELSE
+		PS_AutoMode := FALSE;
+		PS_ManualMode := FALSE;
+		PS_SemiAutoMOde := FALSE;		
+	END_IF
+//END_IF
+
+IF RTRIG_AutoMode.Q THEN
+	PS_AutoMode := FALSE;
+	PS_ManualMode := FALSE;
+	PS_SemiAutoMOde := FALSE;
+	ActualMode := eLoadingMode.Auto;	
+END_IF
+
+IF RTRIG_ManualMode.Q THEN
+	PS_AutoMode := FALSE;
+	PS_ManualMode := FALSE;
+	PS_SemiAutoMOde := FALSE;
+	ActualMode := eLoadingMode.Manual;	
+END_IF
+
+IF RTRIG_SemiAutoMode.Q THEN
+	PS_AutoMode := FALSE;
+	PS_ManualMode := FALSE;
+	PS_SemiAutoMOde := FALSE;
+	ActualMode := eLoadingMode.SemiAuto;	
+END_IF
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_LoadingModeChange">
+      <LineId Id="73" Count="1" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="31" Count="1" />
+      <LineId Id="35" Count="2" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="38" Count="2" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="44" Count="1" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="50" Count="1" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="66" Count="4" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="60" Count="5" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

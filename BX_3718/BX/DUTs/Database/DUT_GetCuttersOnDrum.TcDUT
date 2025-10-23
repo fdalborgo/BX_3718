@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_GetCuttersOnDrum" Id="{f61fdd77-4611-4620-984c-04f83b9115ed}">
+    <Declaration><![CDATA[TYPE DUT_GetCuttersOnDrum :
+STRUCT
+	Drum		: STRING(30);
+	JsonResult	: STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <GVL Name="DB" Id="{ecc7e9a2-edbd-4643-bda5-fddb3b412a24}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+	PRODUCTION_QUEUE_BUFFER_DIM : UINT := 50;
+	MAX_STRING_SIZE	: UDINT := 65535;
+	MAX_NUMBER_ST	: UDINT := 79;
+END_VAR
+
+VAR_GLOBAL
+	stPLCData 			: DUT_stPLCData;
+	stOrder 			: ARRAY[0..DB.PRODUCTION_QUEUE_BUFFER_DIM] OF DUT_stOrder;
+	stProcessingData	: ARRAY[0..CNC.NUM_STATIONS] OF DUT_stProcessingData;
+	
+	ProcessingHMIDataLocation	: ARRAY[0..CNC.NUM_DATA_POSITION] OF DUT_stProcessingHMIData1;
+	ProcessingHMIDataViewData	: ARRAY[0..CNC.NUM_DATA_POSITION] OF DUT_stProcessingHMIData2;
+	
+	stResourceInfo			: ARRAY[0..6] OF DUT_OutInfoOrigin;
+	fbTriggerSequencer 		: FB_TriggerSequencer;
+	
+	HMI_SP_Alarm			: ARRAY[1..DB.MAX_NUMBER_ST] OF DUT_stSPAlarm;
+	MesReadStatusCmd	: BOOL;
+	GetProcessingDataForHMI_Trig : BOOL;
+	
+/////////////FOR HMI
+	fbGSCNextSPGetResourcesByType : FB_MSSQL_spGetResourcesByType; // usato direttemente da HMI
+	fbGSCNextSPGetResourcesByName : FB_MSSQL_spGetResourcesByName; // usato direttemente da HMI
+	fbGSCNextSPSetResourcesByName : FB_MSSQL_spSetResourcesByName; // usato direttemente da HMI
+	fbGSCNextSPGetResourcesListByType : FB_MSSQL_spGetResourcesListByType; // usato direttemente da HMI
+	fbGSCNextSPGetFormattedTablesFromSequences : FB_MSSQL_spGetFormattedTablesFromSequences; // usato direttemente da HMI
+	fbGSCNextSPGetOriginsFromSequence 	: FB_MSSQL_spGetOriginsFromSequence; // usato direttemente da HMI
+	fbGSCNextSPGetBlankKey 				: FB_MSSQL_spGetBlankKey; // usato direttemente da HMI
+	fbGSCNextSPGetBlankKeyByName 		: FB_MSSQL_spGetBlankKeyByName; // usato direttemente da HMI
+	fbGSCNextSPGetBatchHistory   		: FB_MSSQL_spGetBatchHistory; // usato direttemente da HMI
+	fbGSCNextSPGetBatchHistoryByStatus 	: FB_MSSQL_spGetBatchHistoryByStatus; // usato direttemente da HMI
+	fbGSCNextSPGetPartHistory  			: FB_MSSQL_spGetPartHistory; // usato direttemente da HMI
+	fbGSCNextSPGetPartHistoryByBatchName : FB_MSSQL_spGetPartHistoryByBatchName; // usato direttemente da HMI
+	fbGSCNextSPGetSideCode 				: FB_MSSQL_spGetSideCode; // usato direttemente da HMI
+	fbGSCNextSPGetOrigins 				: FB_MSSQL_spGetOrigins; // usato direttemente da HMI
+	fbGSCNextSPGetOriginsByName 		: FB_MSSQL_spGetOriginsByName; // usato direttemente da HMI
+	fbGSCNextSPGetOriginsBySide 		: FB_MSSQL_spGetOriginsBySide; // usato direttemente da HMI
+	fbGSCNextSPGetCutters 				: FB_MSSQL_spGetCutters; // usato direttemente da HMI
+	fbGSCNextSPGetCuttersByName			: FB_MSSQL_spGetCuttersByName; // usato direttemente da HMI
+	fbGSCNextSPGetCuttersBySide 		: FB_MSSQL_spGetCuttersBySide; // usato direttemente da HMI
+	fbGSCNextSPGetMillings 				: FB_MSSQL_spGetMillings; // usato direttemente da HMI
+	fbGSCNextSPGetMillingsByName 		: FB_MSSQL_spGetMillingsByName; // usato direttemente da HMI
+	fbGSCNextSPGetMillingsByFamilyName 	: FB_MSSQL_spGetMillingsByFamilyName; // usato direttemente da HMI
+	fbGSCNextSPGetResourcesByNameMilling 	: FB_MSSQL_spGetResourcesByNameMilling; // usato direttemente da HMI
+	fbGSCNextSPGetOrderInfoList 			: FB_MSSQL_spGetOrderInfoList; // usato direttemente da HMI
+	fbGSCNextSPMES_GetOrderInfoList 		: FB_MSSQL_spMES_GetOrderInfoList; // usato direttemente da HMI
+	fbGSCNextSPAppendBatchToProductionQueue : FB_MSSQL_spAppendBatchToProductionQueueFromHMI; // usato direttemente da HMI
+	fbGSCNextSPMES_GetOrderItems 			: FB_MSSQL_spMES_GetOrderItems; // usato direttemente da HMI
+	fbGSCNextSPGetOrderItems 			: FB_MSSQL_spGetOrderItems; // usato direttemente da HMI
+	fbGSCNextSPGetBatchList				: ARRAY[0..1] OF FB_MSSQL_spGetBatchList; // usato direttemente da HMI
+	fbGSCNextSPUpdateBatchToProductionQueue : FB_MSSQL_spUpdateBatchToProductionQueue; // usato direttemente da HMI
+	fbGSCNextSPDeleteBatchToProductionQueue : FB_MSSQL_spDeleteBatchToProductionQueue; // usato direttemente da HMI
+	fbGSCNextSPGetBatchHistoryDetail : FB_MSSQL_spGetBatchHistoryDetail; // usato direttemente da HMI
+	fbGSCNextSPCMD_ForceCompletedBatch 	: FB_MSSQL_spCMD_ForceCompletedBatch; // usato direttemente da HMI
+	fbGSCNextSPCMD_HoldBatch 			: FB_MSSQL_spCMD_HoldBatch; // usato direttemente da HMI
+	fbGSCNextSPCMD_RecoverBatch 		: FB_MSSQL_spCMD_RecoverBatch; // usato direttemente da HMI
+	fbGSCNextSPCMD_RestartBatch 		: FB_MSSQL_spCMD_RestartBatch; // usato direttemente da HMI
+	fbGSCNextSPCMD_ResumeBatch 			: FB_MSSQL_spCMD_ResumeBatch; // usato direttemente da HMI
+	fbGSCNextSPCMD_SuspendBatch 		: FB_MSSQL_spCMD_SuspendBatch; // usato direttemente da HMI
+	fbGSCNextSPCMD_UnholdBatch 			: FB_MSSQL_spCMD_UnholdBatch; // usato direttemente da HMI
+	fbGSCNextSPUpdateSettingRepositoryByName : FB_MSSQL_spUpdateSettingRepositoryByName;  // usato direttemente da HMI
+	fbGSCNextSPGetSettingRepositoryList : FB_MSSQL_spGetSettingRepositoryList;  // usato direttemente da HMI	
+	fbGSCNextSPGetBatchDetailById		: FB_MSSQL_spGetBatchDetailById;  // usato direttemente da HMI
+	fbGSCNextSPChangeBatchPositionInProductionQueue: FB_MSSQL_spChangeBatchPositionInProductionQueue; // usato direttemente da HMI
+	fbGSCNextSPGetCuttersOnDrum				: FB_MSSQL_spGetCuttersOnDrum; // usato direttemente da HMI
+	fbGSCNextSPGetCuttersComboboxFormatted 	: FB_MSSQL_spGetCuttersComboboxFormatted; // usato direttemente da HMI
+	fbGSCNextSPUpdateCuttersOnDrum 			: FB_MSSQL_spUpdateCuttersOnDrum; // usato direttemente da HMI
+	fbGSCNextSPCheckCutterAlreadyPresentOnDrums: FB_MSSQL_spCheckCutterAlreadyPresentOnDrums; // usato direttemente da HMI
+	fbGSCNextSPUpdateCutterData 			: FB_MSSQL_spUpdateCutterData; // usato direttemente da HMI
+	fbGSCNextSPGetProfilesByFamilyName		: FB_MSSQL_spGetProfilesByFamilyName; // usato direttemente da HMI
+	fbGSCNextSPGetProfiles 					: FB_MSSQL_spGetProfiles; // usato direttemente da HMI
+	fbGSCNextSPGetFamilyNamesForCombobox	: FB_MSSQL_spGetFamilyNamesForCombobox; // usato direttemente da HMI
+	fbGSCNextSPGetCuttersFromFamilyName		: FB_MSSQL_spGetCuttersFromFamilyName; // usato direttemente da HMI
+	fbGSCNextSPDeleteProfile 				: FB_MSSQL_spDeleteProfile; // usato direttemente da HMI
+	fbGSCNextSPAddProfile	 				: FB_MSSQL_spAddProfile; // usato direttemente da HMI
+	fbGSCNextSPDeleteCutter 				: FB_MSSQL_spDeleteCutter; // usato direttemente da HMI
+	fbGSCNextSPAddCutter 					: FB_MSSQL_spAddCutter; // usato direttemente da HMI
+	fbGSCNextSPGetBroachingProfileSettings 	: FB_MSSQL_spGetBroachingProfileSettings; // usato direttemente da HMI
+	fbGSCNextSPUpdateBroachingProfileSettings 	: FB_MSSQL_spUpdateBroachingProfileSettings; // usato direttemente da HMI
+	fbGSCNextSPGetSettingRepositoryByName	: FB_MSSQL_spGetSettingRepositoryByName;  // usato direttemente da HMI
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

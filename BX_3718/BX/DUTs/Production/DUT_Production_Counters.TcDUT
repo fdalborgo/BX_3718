@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_Production_Counters" Id="{5582c32d-c1a1-4e6b-b556-d73b379a5d8c}">
+    <Declaration><![CDATA[TYPE DUT_Production_Counters :
+STRUCT
+	TotalPieces						: UDINT; 	// Contatore totale pezzi
+	PartialPieces					: UDINT; 	// Contatore pezzi resettabile manualmente
+	PartialActualGood				: UDINT;	// COntatore pezzi buoni resettabile manualmente
+	BatchPieces						: UDINT;	// Pezzi da produrre per il lotto
+	ActualGood						: UDINT;	// Pezzi ok
+	ActualPieces					: DINT;		// Pezzi già prodotti per il lotto
+	ActualScrap						: DINT;		// Pezzi già prodotti per il lotto
+	PiecesPerHour 					: ARRAY[0..23] OF REAL;
+	MaxPiecesPerHour 				: REAL;
+	ActualDate						: ARRAY [0..2] OF WORD;
+	ActivePiecesDaily_PreviousHours	: REAL;
+	Pieces_Daily					: REAL;
+	BatchPiecesUpdateConfirm		: BOOL;
+	BatchPiecesUpdateAbort			: BOOL;
+	BatchPiecesTextInputValue		: UDINT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

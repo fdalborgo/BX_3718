@@ -1,0 +1,162 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="PRG_OEE" Id="{af2d0553-63a9-4d9d-a17e-866a88560871}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_OEE
+
+VAR_INPUT
+	Enable					: BOOL;
+	Reset					: BOOL;
+	StartTimer				: BOOL;
+	bStatusON				: BOOL;
+	bStatusDOWN				: BOOL;
+	bStatusOFF				: BOOL;
+	bCountUpGood			: BOOL;
+	bCountUpBad				: BOOL;
+	tIdealCycleTime			: TIME;
+	tPlannedProductionTime	: TIME;
+END_VAR
+
+VAR_OUTPUT
+	GoodPieces				: DINT := 0;
+	BadPieces				: DINT := 0;
+	Availabilty 			: REAL	:= 0;
+	Performance 			: REAL	:= 0;
+	Quality					: REAL	:= 0;
+	OEE						: REAL	:= 0;
+	tON						: TIME	:= T#0S;
+	tOFF					: TIME	:= T#0S;
+	tDOWN					: TIME	:= T#0s;
+	
+END_VAR
+
+VAR
+	RTRIG_Reset				: R_TRIG;
+	EndSessionTime			: TIME := T#0S;
+	iState					: INT := 0;
+	RTON_ON					: FB_RetainTimer;
+	RTON_OFF				: FB_RetainTimer;
+	RTON_DOWN				: FB_RetainTimer;
+	RTRIG_StartTimer		: R_TRIG;
+	TotalPieces				: UDINT;
+	TotalTime_ms			: DWORD;
+	rOperatingTime			: REAL;
+	rProductionTime			: REAL;
+	CTU_GoodPieces			: CTU;
+	CTU_BadPieces			: CTU;
+	TimeStart				: TIME;
+	OperatingTime			: TIME;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_StartTimer(CLK := StartTimer);
+RTRIG_Reset(CLK := Reset);
+IF(RTRIG_Reset.Q) THEN
+	iState := 0;
+END_IF
+
+// Retain timers
+	RTON_ON(Enable := bStatusON AND Enable AND StartTimer AND NOT Reset, Reset := iState = 0, ET => tON);
+	RTON_OFF(Enable := bStatusOFF AND Enable AND StartTimer AND NOT Reset, Reset := iState = 0, ET => tOFF);
+	RTON_DOWN(Enable := bStatusDOWN AND Enable AND StartTimer AND NOT Reset, Reset := iState = 0, ET => tDOWN);
+
+// CounterUp 
+	CTU_GoodPieces(CU := bCountUpGood AND NOT bStatusDOWN, Reset := iState = 10);
+	CTU_BadPieces(CU := bCountUpBad AND NOT bStatusDOWN, Reset := iState = 10);
+
+
+CASE iState OF
+	0:
+		GoodPieces					:= 0;
+		BadPieces					:= 0;
+		Performance 				:= 0;
+		Availabilty 				:= 0;
+		Quality 					:= 0;
+		OEE							:= 0;
+		
+		iState := 10;
+		
+	10:
+		IF(Enable) AND RTRIG_StartTimer.Q THEN
+			TimeStart 		:= TIME();
+			EndSessionTime 	:= TimeStart + tPlannedProductionTime;
+
+			iState := 20;
+		END_IF
+	
+	20:
+		// COUTNERS
+			GoodPieces := CTU_GoodPieces.CV;
+			BadPieces := CTU_BadPieces.CV;
+			
+		// AVAILABILITY
+			TotalTime_ms := RTON_ON.ET_ms + RTON_OFF.ET_ms + RTON_DOWN.ET_ms;
+			IF(TotalTime_ms > 0) THEN
+				Availabilty :=  (DWORD_TO_REAL(RTON_ON.ET_ms) + DWORD_TO_REAL(RTON_OFF.ET_ms)) / DWORD_TO_REAL(TotalTime_ms);
+			ELSE
+				Availabilty := 0;
+			END_IF
+		
+		// QUALITY
+			TotalPieces := GoodPieces + BadPieces;
+			IF(TotalPieces > 0) THEN
+				Quality := TO_REAL(GoodPieces) / TO_REAL(TotalPieces);
+			ELSE
+				Quality := 0;
+			END_IF
+			
+		// PERFORMANCE
+			OperatingTime := RTON_ON.ET + RTON_DOWN.ET;
+			IF(TIME_TO_DWORD(OperatingTime) > 0) THEN
+				rProductionTime := UDINT_TO_REAL(GoodPieces)* DWORD_TO_REAL(TIME_TO_DWORD(tIdealCycleTime));
+				rOperatingTime	:= DWORD_TO_REAL(TIME_TO_DWORD(OperatingTime));
+				Performance := rProductionTime / rOperatingTime;			
+			ELSE
+				Performance := 0;		
+			END_IF
+			
+			OEE := Availabilty * Performance * Quality;
+			
+			
+		IF(TimeStart > EndSessionTime) THEN
+			iState := 999;
+		END_IF
+ELSE
+	;
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="PRG_OEE">
+      <LineId Id="994" Count="0" />
+      <LineId Id="766" Count="3" />
+      <LineId Id="895" Count="0" />
+      <LineId Id="772" Count="3" />
+      <LineId Id="896" Count="1" />
+      <LineId Id="871" Count="0" />
+      <LineId Id="873" Count="0" />
+      <LineId Id="776" Count="2" />
+      <LineId Id="781" Count="0" />
+      <LineId Id="783" Count="1" />
+      <LineId Id="786" Count="2" />
+      <LineId Id="942" Count="0" />
+      <LineId Id="790" Count="6" />
+      <LineId Id="991" Count="0" />
+      <LineId Id="797" Count="3" />
+      <LineId Id="878" Count="0" />
+      <LineId Id="875" Count="0" />
+      <LineId Id="877" Count="0" />
+      <LineId Id="876" Count="0" />
+      <LineId Id="801" Count="0" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="848" Count="0" />
+      <LineId Id="802" Count="0" />
+      <LineId Id="884" Count="1" />
+      <LineId Id="849" Count="0" />
+      <LineId Id="803" Count="14" />
+      <LineId Id="882" Count="1" />
+      <LineId Id="818" Count="0" />
+      <LineId Id="879" Count="1" />
+      <LineId Id="819" Count="6" />
+      <LineId Id="13" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

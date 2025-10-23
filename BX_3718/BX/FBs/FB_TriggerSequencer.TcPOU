@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_TriggerSequencer" Id="{4828f83c-3d7a-4973-9262-9b2846b82b0f}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TriggerSequencer
+VAR_INPUT
+    In : ARRAY[0..5] OF BOOL;
+    Reset : BOOL;
+	Delay : TIME;
+END_VAR
+VAR_OUTPUT
+    Out : BOOL;
+END_VAR
+VAR
+	RTRIG_In : ARRAY[0..5] OF R_TRIG;
+	RTRIG_Reset : R_TRIG;
+	i : USINT;
+	CountPendingTriggers : INT := 0;
+	TON_OutDelay	: TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TON_OutDelay(PT := Delay);
+// Controllo fronti di salita e incremento contatore
+FOR i := 0 TO 5 DO
+	RTRIG_In[i](CLK := In[i]);
+	IF RTRIG_In[i].Q THEN
+		CountPendingTriggers := CountPendingTriggers + 1;
+	END_IF
+END_FOR
+
+// Logica di generazione del trigger
+RTRIG_Reset(CLK := Reset);
+IF NOT Out AND (CountPendingTriggers > 0) AND NOT Reset THEN
+    TON_OutDelay.IN := TRUE;
+	IF TON_OutDelay.Q THEN
+		TON_OutDelay.IN := FALSE;
+		Out := TRUE;
+	END_IF
+ELSE
+    IF RTRIG_Reset.Q AND Out THEN
+        CountPendingTriggers := MAX(CountPendingTriggers - 1,0);
+        Out := FALSE;
+    END_IF
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_TriggerSequencer">
+      <LineId Id="206" Count="0" />
+      <LineId Id="165" Count="1" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="184" Count="2" />
+      <LineId Id="171" Count="2" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="174" Count="1" />
+      <LineId Id="207" Count="1" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="209" Count="0" />
+      <LineId Id="177" Count="3" />
+      <LineId Id="182" Count="0" />
+      <LineId Id="92" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

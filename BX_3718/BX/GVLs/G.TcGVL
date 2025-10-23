@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <GVL Name="G" Id="{715708f4-fb84-4c41-8114-ad23a562129c}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL PERSISTENT RETAIN
+	Ovr_CounterValue : UINT;
+	Ovr : USINT;
+	//ShiftManData : ARRAY[0..20] OF stShiftData;
+	DataBuffer : ARRAY[0..DATABUFFER_SIZE] OF DataBuffer;
+	filesList	: ARRAY[0..99] OF STRING;	
+	filesNumb : UINT;   
+
+	WID_Old : DINT;  
+	Batch_old	:STRING; 
+
+	LoadingModeActive : eLoadingMode;  
+	OperatingModeOld : eMode;
+	MachineStateOld	: eState;         
+	IdList_Old	: ARRAY[0..10] OF DINT;
+END_VAR
+VAR_GLOBAL
+	fbGetCurTaskIndex : GETCURTASKINDEX;
+	
+	RequestNext			: BOOL;
+	RequestActual		: BOOL;
+	
+	SystemTime			: DT;
+	
+	ResetButton		: BOOL;
+	MachineEmpty		: BOOL;
+	
+	fbProcessingData			: ARRAY[0..CNC.NUM_DATA_POSITION] OF FB_ProcessingData;
+	
+	PMCShiftDataSlide		: stShiftData;
+	PMCShiftDataLaser		: stShiftData;
+	PMCShiftDataCart		: stShiftData;
+	PMCShiftDataDeburring	: stShiftData;
+	PMCShiftDataPallet		: stShiftData;
+
+
+	OEE_bCountUpGood  : BOOL;
+	OEE_bCountUpBad  : BOOL;
+
+	LasitOn				: BOOL;
+	UpdatePartLocationsAndProcessingDataTrigger : BOOL;
+END_VAR
+VAR_GLOBAL CONSTANT
+	PRODUCTIONTABLE_SIZE		: UDINT := 50;
+	DATABUFFER_SIZE		: UINT := 50;
+	MAX_ALR						: UINT 	:= 600;
+	MAX_ALR_WORD				: UINT 	:= 60;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

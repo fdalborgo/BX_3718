@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="PRG_MSSQL_spLogModeStateEvent" Id="{b0e32698-bff6-4071-a9e1-39e00db8dd3d}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_MSSQL_spLogModeStateEvent
+VAR_INPUT
+	Execute					: BOOL;
+	Enable					: BOOL;
+	Parameters				: DUT_LogModeStateEvent;
+END_VAR
+VAR_OUTPUT
+	Error					: BOOL;
+	ErrorID					: DINT;
+	Done					: BOOL;
+	Busy					: BOOL;
+	tcMessage 				: I_TcMessage;
+	Q_tElapsedTime			: TIME;
+END_VAR
+VAR
+	RTRIG_Execute			: R_TRIG;
+	iState					: INT := -1;
+END_VAR
+VAR_IN_OUT
+	fbSQLResult				: FB_SQLResultEvt;
+	fbSQLStoredProcedure	: FB_SQLStoredProcedureEvt;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Execute(CLK := Execute AND Enable);
+IF(RTRIG_Execute.Q) THEN
+	 Done							:= FALSE;
+	 Error							:= FALSE;
+	 ErrorID						:= 0;
+	 
+	 iState							:= 0;
+ELSIF NOT Execute AND NOT Busy THEN
+	Busy			:= FALSE;
+	Done			:= FALSE;
+	Error			:= FALSE;
+	
+	iState := -1;
+END_IF
+ 
+ CASE iState OF
+ 
+	 0:
+		Busy								:= TRUE;
+		iState 								:= 10;
+		
+	10:
+		IF fbSQLStoredProcedure.Execute(pParameterStrc := ADR(Parameters), cbParameterStrc := SIZEOF(Parameters)) THEN
+			IF fbSQLStoredProcedure.bError THEN
+				tcMessage := fbSQLStoredProcedure.ipTcResult;
+				
+				iState 							:= 1010;
+			ELSE
+				iState 							:= 999;
+			END_IF    
+		END_IF
+		
+	999:
+		Done			:= TRUE;
+		Busy			:= FALSE;
+		
+ END_CASE 
+ 
+IF iState > 1000 THEN
+	Error 		:= TRUE;
+	ErrorID	 	:= iState;
+	Busy	 	:= FALSE;
+	iState := -1;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="PRG_MSSQL_spLogModeStateEvent">
+      <LineId Id="307" Count="13" />
+      <LineId Id="324" Count="3" />
+      <LineId Id="329" Count="1" />
+      <LineId Id="332" Count="1" />
+      <LineId Id="335" Count="8" />
+      <LineId Id="351" Count="0" />
+      <LineId Id="353" Count="8" />
+      <LineId Id="363" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="364" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

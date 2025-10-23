@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_Statistics" Id="{e471b8b5-6b6b-4915-953b-204eac4ab1a1}">
+    <Declaration><![CDATA[TYPE DUT_Statistics :
+STRUCT
+	OEE_Enable				: BOOL;
+	OEE_Reset				: BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

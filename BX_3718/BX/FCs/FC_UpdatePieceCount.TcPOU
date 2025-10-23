@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_UpdatePieceCount" Id="{3a9d3d10-a702-467c-a024-04e10e9d4318}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_UpdatePieceCount
+VAR_INPUT
+	aByte			: stByteAsBit;
+	In				: POINTER TO UDINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF FC_ProductStatusNopresence(aByte) = eProductStatus.Completed THEN
+	In[eHeaderPieces.Ok] := In[eHeaderPieces.Ok] + 1;
+END_IF
+IF FC_ProductStatusNopresence(aByte) = eProductStatus.Scraped THEN
+	In[eHeaderPieces.Ko] := In[eHeaderPieces.Ko] + 1;
+END_IF	
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_UpdatePieceCount">
+      <LineId Id="109" Count="4" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="17" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_GetBatchHistory" Id="{2685b97b-05a3-45d1-a4e9-5282009d1681}">
+    <Declaration><![CDATA[TYPE DUT_GetBatchHistory:
+STRUCT  
+	return_value	: DINT;
+	CurrentPage	: DINT;
+	RecordToFetch	: DINT;
+END_STRUCT
+END_TYPE
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

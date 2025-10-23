@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_HMI_In" Id="{70e86f94-50ee-43ab-ac6f-07a7eee160fe}">
+    <Declaration><![CDATA[TYPE DUT_HMI_In :
+STRUCT
+	AxisSelected 		: USINT;
+	Tools				: DUT_HMI_Tools;
+	Header				: DUT_HMI_Header;
+	Events				: DUT_HMI_Events;
+	Navigation			: DUT_HMI_Navigation;
+	Dummy				: ARRAY[0..9] OF BOOL; // Non ho capito perchè ma in qualche modo pannelo scrive più memoria oltre in navigation, quindi ho dichiarato questa variabile
+												// per occupare memoria a caso, se no pannello mi tenva forzata la roba di statistics
+	Statistics			: DUT_Statistics;
+	Resource			: DUT_HMI_In_Resource;
+	LoadingModeChanged  : BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

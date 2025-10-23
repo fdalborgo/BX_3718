@@ -1,0 +1,229 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_FlyPowerMarkExeManager" Id="{19f9f03b-3f88-410a-8010-1b63f38f8a87}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_FlyPowerMarkExeManager
+VAR_INPUT
+	UpsPowerStatus : E_UpsPowerStatus;
+	LasitControllerOn : BOOL;
+	Reset : BOOL;
+END_VAR
+VAR_OUTPUT
+	Error	: BOOL  := FALSE;
+	ErrorID	: INT 	:= 0;
+	ErrorSubID	: INT 	:= 0;
+END_VAR
+VAR_IN_OUT
+	Init	: BOOL;
+	NT_OpenExe : NT_StartProcess;
+	NT_CloseExe : NT_StartProcess;
+END_VAR
+VAR
+	iState				: INT 	:= 0;
+	RTRIG_PowerOnLine	: R_TRIG;
+	RTRIG_PowerOnBattery	: R_TRIG;
+	RTRIG_Reset			: R_TRIG;
+	DelayOpenExe		: TON;
+	TON_Timeout			: TON;
+	tTimeout			: TIME := T#10S;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_PowerOnLine(CLK := UpsPowerStatus = E_UpsPowerStatus.PowerOnLine);
+RTRIG_PowerOnBattery(CLK := UpsPowerStatus = E_UpsPowerStatus.PowerOnBattery);
+
+RTRIG_Reset(CLK := Reset);
+IF RTRIG_Reset.Q THEN
+	iState := 0;
+	ErrorID 	:= 0;
+	ErrorSubID := 0;
+	Error		:= FALSE;
+END_IF
+
+IF RTRIG_PowerOnLine.Q THEN
+	NT_OpenExe.START := FALSE;
+	NT_CloseExe.START := FALSE;
+	iState := 10;
+END_IF
+
+IF RTRIG_PowerOnBattery.Q THEN
+	NT_OpenExe.START := FALSE;
+	NT_CloseExe.START := FALSE;
+	iState := 100;
+END_IF
+
+DelayOpenExe(IN := iState = 10 AND LasitControllerOn, PT := T#30S);
+
+CASE iState OF
+	0:
+		;
+		
+	10:
+		IF Init THEN
+			Init := FALSE;
+			iState := 0;
+		ELSIF DelayOpenExe.Q THEN
+			//NT_OpenExe.COMNDLINE := 'FLY_POWERMARK.exe "C:\Program Files (x86)\Lasit spa\Laser_FLY_POWERMARK\FLY_POWERMARK.exe"'; 
+			//togliere commento se si vuole attivare debug dell'esecuzione del .bat
+			NT_OpenExe.COMNDLINE := 'FLY_POWERMARK.exe "C:\Program Files (x86)\Lasit spa\Laser_FLY_POWERMARK\FLY_POWERMARK.exe" debug'; 
+		
+			iState := 20;
+		END_IF
+		
+	20:
+		NT_OpenExe.START := TRUE;
+		IF NT_OpenExe.BUSY THEN
+			iState := 30;
+		END_IF
+		
+	30:
+		IF NOT NT_OpenExe.BUSY THEN
+			NT_OpenExe.START := FALSE;
+			iState := 0;
+		ELSIF NT_OpenExe.ERR THEN
+			NT_OpenExe.START := FALSE;
+			iStateError();
+		END_IF		
+
+	100:
+		//NT_CloseExe.COMNDLINE := 'FLY_POWERMARK.exe';
+		//togliere commento se si vuole attivare debug dell'esecuzione del .bat
+		NT_CloseExe.COMNDLINE := 'FLY_POWERMARK.exe debug';
+		iState := 110;
+		
+	110:
+		NT_CloseExe.START := TRUE;
+		IF NT_CloseExe.BUSY THEN
+			iState := 120;
+		END_IF
+		
+	120:
+		IF NOT NT_CloseExe.BUSY THEN
+			NT_CloseExe.START := FALSE;
+			iState := 0;
+		ELSIF NT_CloseExe.ERR THEN
+			NT_CloseExe.START := FALSE;
+			iStateError();
+		END_IF		
+	
+END_CASE
+
+//Timeout
+Timeout();
+
+// ERROR
+ErrorSet();	
+]]></ST>
+    </Implementation>
+    <Method Name="ErrorSet" Id="{199bfb96-eba9-4e9a-b0b2-64f1de3fa7ef}">
+      <Declaration><![CDATA[METHOD PRIVATE ErrorSet : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF (iState >= 1000) THEN
+	ErrorID 	:= iState;
+	Error		:= TRUE;
+	ErrorSet	:= TRUE;
+	
+	iState		:= -1;
+ELSE
+	ErrorSet := FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="iStateError" Id="{c9c18385-2936-4bff-bdad-4aa8e3dfbf86}">
+      <Declaration><![CDATA[METHOD PRIVATE iStateError
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[iState := iState + 1000;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Timeout" Id="{96760c1b-b35a-4484-a00d-3cecb4d146bc}">
+      <Declaration><![CDATA[METHOD PRIVATE Timeout : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TON_Timeout(IN:= iState > 0 AND iState < 1000 AND iState <> 10 AND tTimeout <> T#0MS, PT := tTimeout);
+IF TON_Timeout.Q THEN
+    ErrorSubID := iState;
+	Timeout := TRUE;
+	
+    iState := 1999;
+ELSE
+	Timeout := FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_FlyPowerMarkExeManager">
+      <LineId Id="2470" Count="1" />
+      <LineId Id="2515" Count="0" />
+      <LineId Id="2514" Count="0" />
+      <LineId Id="2516" Count="1" />
+      <LineId Id="2520" Count="0" />
+      <LineId Id="2549" Count="0" />
+      <LineId Id="2519" Count="0" />
+      <LineId Id="2518" Count="0" />
+      <LineId Id="2536" Count="1" />
+      <LineId Id="2544" Count="1" />
+      <LineId Id="2538" Count="3" />
+      <LineId Id="2547" Count="0" />
+      <LineId Id="2546" Count="0" />
+      <LineId Id="2542" Count="0" />
+      <LineId Id="2535" Count="0" />
+      <LineId Id="2581" Count="0" />
+      <LineId Id="2580" Count="0" />
+      <LineId Id="2472" Count="0" />
+      <LineId Id="2451" Count="1" />
+      <LineId Id="2543" Count="0" />
+      <LineId Id="2574" Count="1" />
+      <LineId Id="2608" Count="1" />
+      <LineId Id="2611" Count="0" />
+      <LineId Id="2576" Count="0" />
+      <LineId Id="2641" Count="1" />
+      <LineId Id="2640" Count="0" />
+      <LineId Id="2578" Count="0" />
+      <LineId Id="2639" Count="0" />
+      <LineId Id="2579" Count="0" />
+      <LineId Id="2483" Count="7" />
+      <LineId Id="2493" Count="0" />
+      <LineId Id="2506" Count="0" />
+      <LineId Id="2494" Count="1" />
+      <LineId Id="2505" Count="0" />
+      <LineId Id="2504" Count="0" />
+      <LineId Id="2491" Count="0" />
+      <LineId Id="2643" Count="0" />
+      <LineId Id="2521" Count="0" />
+      <LineId Id="2646" Count="1" />
+      <LineId Id="2645" Count="0" />
+      <LineId Id="2648" Count="0" />
+      <LineId Id="2644" Count="0" />
+      <LineId Id="2522" Count="12" />
+      <LineId Id="2460" Count="0" />
+      <LineId Id="2458" Count="0" />
+      <LineId Id="2453" Count="0" />
+      <LineId Id="2497" Count="4" />
+      <LineId Id="2496" Count="0" />
+      <LineId Id="2454" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_FlyPowerMarkExeManager.ErrorSet">
+      <LineId Id="18" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="27" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_FlyPowerMarkExeManager.iStateError">
+      <LineId Id="11" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_FlyPowerMarkExeManager.Timeout">
+      <LineId Id="6" Count="2" />
+      <LineId Id="11" Count="1" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="13" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

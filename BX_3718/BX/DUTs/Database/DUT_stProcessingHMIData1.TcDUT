@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_stProcessingHMIData1" Id="{2e407a49-f4b6-4e6f-8d72-aad213fff784}">
+    <Declaration><![CDATA[TYPE DUT_stProcessingHMIData1 :
+STRUCT
+	LocationId 			: DINT;
+	PartId	 			: DINT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

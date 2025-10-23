@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_stProcessingHMIData2" Id="{e5c50a1f-5c80-4cdc-b856-8ee859da2a8b}">
+    <Declaration><![CDATA[TYPE DUT_stProcessingHMIData2 :
+STRUCT
+    ProductName 	: STRING(50);
+	BatchName 		: STRING(50);
+	RowIndex		: STRING(50);
+	RowRunningNo    : STRING(50);
+	RowQty          : STRING(50);
+	OrderReference  : STRING(50);
+	Profile         : STRING(50);
+	PlugType		: STRING(50);
+	Brushing        : STRING(50);
+	ProfileLaser    : STRING(50);
+	BackHole       	: STRING(50);
+    UnloadMode 		: STRING(50);
+    RunningNoOverRowQty : STRING(50);
+	//CurrentRowOverRowCount  : STRING(50);
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

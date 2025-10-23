@@ -1,0 +1,234 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FB_PneumaticActuator_2EV" Id="{2d052ec7-a798-47f6-af8f-b149a96c9a5c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_PneumaticActuator_2EV
+VAR_INPUT
+	I_bEnable					: BOOL;
+	I_bCmdFwd					: BOOL;					// Comando avanti
+	I_bCmdBwd					: BOOL;					// Comando indietro
+	I_eReadyPos					: eReadyPos := Bwd;		// Posizione iniziale di fuori ingombro per start ciclo 0=indietro, 1=avanti
+	I_bSensorFwd				: BOOL;					// Sensore avanti
+	I_bSensorBwd				: BOOL;					// Sensore indietro
+	I_bCmdReset					: BOOL;					// Reset allarmi
+	I_bAirPresence				: BOOL;					// Presenza aria nel circuito - Abilitazione comandi
+	I_bManualMode				: BOOL;					// Modo manuale
+	I_bEvMonostable				: BOOL;
+	I_tTimeoutFwd				: TIME := T#0S;			// Timeout movimento avanti
+	I_tTimeoutBwd				: TIME := T#0S;			// Timeout movimento indietro
+	I_tDelaySensorFwd			: TIME := T#0S;			// Ritardo sul sensore avanti
+	I_tDelaySensorBwd			: TIME := T#0S;			// Ritardo sul sensore indietro
+	I_tWarningFwd				: TIME := T#0S;			// Warning movimento avanti  
+	I_tWarningBwd				: TIME := T#0S;			// Warning movimento indietro
+END_VAR
+
+VAR_OUTPUT
+	Q_bActuatorFwd				: BOOL := FALSE;		// Comando avanti
+	Q_bActuatorBwd				: BOOL := FALSE;		// Comando indietro
+	Q_bTimeoutFwd				: BOOL := FALSE;		// Timeout avanti attivo
+	Q_bTimeoutBwd				: BOOL := FALSE;		// Timeout indietro attivo
+	Q_bWarningFwd				: BOOL := FALSE;		// Warning avanti attivo
+	Q_bWarningBwd				: BOOL := FALSE;		// Warning indietro attivo
+	Q_bSensorBroken				: BOOL := FALSE;		// Timeout entrambi sensori attivi
+	Q_bDelaySensorFwd			: BOOL := FALSE;		// Stato sensore avanti ritardato
+	Q_bDelaySensorBwd			: BOOL := FALSE;		// Stato sensore indietro ritardato
+	Q_tElapsedTimeFwd			: UINT := 0;			// Durata movimento avanti
+	Q_tElapsedTimeBwd			: UINT := 0;			// Durata movimento indietro
+	Q_tLastFwd					: UINT := 0;			// Durata ultimo movimento avanti
+	Q_tLastBwd					: UINT := 0;			// Durata ultimo movimento indietro
+	Q_bReadyPos					: BOOL := FALSE;		// In posizione iniziale di fuori ingombro
+	Q_eStatus					: eEV_Status := eEV_Status.NotUsed; // Descrizione stato funzione
+END_VAR
+
+VAR
+	_TON_TimerFwd				: TON;
+	_TON_TimerBwd				: TON;
+	_TON_WarningFwd				: TON;
+	_TON_WarningBwd				: TON;
+	_TON_TimerSensorBroken		: TON;
+	_TON_DelaySensorFwd			: TON;	
+	_TON_DelaySensorBwd			: TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[_TON_DelaySensorFwd(IN := I_bSensorFwd, PT := I_tDelaySensorFwd, Q => Q_bDelaySensorFwd);					
+_TON_DelaySensorBwd(IN := I_bSensorBwd, PT := I_tDelaySensorBwd, Q => Q_bDelaySensorBwd);
+
+_TON_TimerFwd(IN := Q_bActuatorFwd AND NOT I_bSensorFwd AND I_bAirPresence);					
+_TON_TimerBwd(IN := Q_bActuatorBwd AND NOT I_bSensorBwd AND I_bAirPresence);
+												
+IF I_bEnable THEN
+	IF I_bManualMode THEN
+		// Logica di movimento in indietro
+		IF I_bCmdBwd THEN
+			Q_bActuatorBwd := TRUE;
+			Q_bActuatorFwd := FALSE;
+			Q_eStatus := eEV_Status.MovingBackward;
+		ELSIF NOT I_bEvMonostable AND NOT I_bCmdBwd THEN
+			Q_bActuatorBwd := FALSE;
+		END_IF
+		// Logica di movimento in avanti
+		IF I_bCmdFwd THEN
+			Q_bActuatorFwd := TRUE;
+			Q_bActuatorBwd := FALSE;
+			Q_eStatus := eEV_Status.MovingForward;  
+		ELSIF NOT I_bEvMonostable AND NOT I_bCmdFwd THEN
+			Q_bActuatorFwd := FALSE;
+		END_IF
+	ELSE
+		// Logica di movimento in avanti
+		IF I_bCmdFwd AND NOT I_bSensorFwd THEN
+		    Q_bActuatorFwd := TRUE;          
+		    Q_bActuatorBwd := FALSE;         
+		    Q_eStatus := eEV_Status.MovingForward;   
+		ELSIF I_bSensorFwd AND NOT I_bEvMonostable THEN
+		    Q_bActuatorFwd := FALSE;         
+		END_IF
+	
+		// Logica di movimento indietro
+		IF I_bCmdBwd AND NOT I_bSensorBwd THEN
+		    Q_bActuatorBwd := TRUE;          				
+		    Q_bActuatorFwd := FALSE;         				
+		    Q_eStatus := eEV_Status.MovingBackward;	
+		ELSIF I_bSensorBwd AND NOT I_bEvMonostable THEN
+		    Q_bActuatorBwd := FALSE;         				
+		END_IF
+	END_IF	
+END_IF
+
+// Status
+IF (Q_eStatus = eEV_Status.MovingBackward AND I_bSensorBwd) OR (Q_eStatus = eEV_Status.MovingForward AND I_bSensorFwd) THEN
+	Q_eStatus := eEV_Status.MoveCompleted;
+END_IF	
+
+// Condizione di sicurezza: evitare comandi simultanei
+IF I_bCmdFwd AND I_bCmdBwd THEN
+    Q_bActuatorFwd := FALSE;	
+    Q_bActuatorBwd := FALSE;    
+END_IF
+		
+// Ready Position
+IF(((I_eReadyPos = Bwd AND I_bSensorBwd) OR (I_eReadyPos = Fwd AND I_bSensorFwd)) AND NOT Q_bSensorBroken AND NOT Q_bTimeoutBwd AND NOT Q_bTimeoutFwd) THEN
+	Q_bReadyPos := TRUE;
+ELSE
+	Q_bReadyPos := FALSE;
+END_IF
+
+// Elapsed Time	
+Q_tElapsedTimeBwd := TIME_TO_UINT(_TON_TimerBwd.ET);
+Q_tElapsedTimeFwd := TIME_TO_UINT(_TON_TimerFwd.ET);
+IF I_bSensorFwd THEN
+	Q_tLastFwd := Q_tElapsedTimeFwd;
+ELSIF I_bSensorBwd THEN
+	Q_tLastBwd := Q_tElapsedTimeBwd;
+END_IF	
+
+// Timeout
+_TON_TimerBwd.PT := SEL(I_tTimeoutBwd = T#0S, I_tTimeoutBwd, T#99S);
+_TON_TimerFwd.PT := SEL(I_tTimeoutFwd = T#0S, I_tTimeoutFwd, T#99S);
+IF(_TON_TimerFwd.Q AND (I_tTimeoutFwd > T#0S)) AND I_bAirPresence THEN
+	Q_bTimeoutFwd 	:= TRUE;
+END_IF
+IF(_TON_TimerBwd.Q AND (I_tTimeoutBwd > T#0S)) AND I_bAirPresence THEN
+	Q_bTimeoutBwd 	:= TRUE;
+END_IF
+
+// Warning
+_TON_WarningFwd(IN := Q_eStatus = eEV_Status.MovingForward AND NOT I_bSensorFwd AND I_bAirPresence, PT := I_tWarningFwd);					
+_TON_WarningBwd(IN := Q_eStatus = eEV_Status.MovingBackward AND NOT I_bSensorBwd AND I_bAirPresence, PT := I_tWarningBwd);
+IF I_bAirPresence THEN
+	IF _TON_WarningFwd.Q AND (I_tWarningFwd > T#0S) THEN
+		Q_bWarningFwd 	:= TRUE;
+	ELSE
+		Q_bWarningFwd 	:= FALSE;
+	END_IF
+	IF _TON_WarningBwd.Q AND (I_tWarningBwd > T#0S) THEN
+		Q_bWarningBwd 	:= TRUE;
+	ELSE
+		Q_bWarningBwd 	:= FALSE;
+	END_IF
+END_IF
+
+// Error - Sensor broken
+_TON_TimerSensorBroken(PT := T#100MS, Q => Q_bSensorBroken);
+IF I_bSensorFwd AND I_bSensorBwd  THEN
+	_TON_TimerSensorBroken.IN := TRUE;
+ELSE
+	_TON_TimerSensorBroken.IN := FALSE;
+END_IF
+
+// Error management
+IF Q_bTimeoutBwd OR Q_bTimeoutFwd OR Q_bSensorBroken THEN
+	IF NOT Q_bSensorBroken THEN
+		Q_eStatus := eEV_Status.Timeout;
+	ELSE
+		Q_eStatus := eEV_Status.Error;
+	END_IF
+END_IF
+
+// Reset function
+IF(I_bCmdReset) THEN
+	Q_bTimeoutFwd 		:= FALSE;
+	Q_bTimeoutBwd 		:= FALSE;
+	Q_bSensorBroken		:= FALSE;
+END_IF
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_PneumaticActuator_2EV">
+      <LineId Id="448" Count="0" />
+      <LineId Id="446" Count="1" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="456" Count="0" />
+      <LineId Id="397" Count="1" />
+      <LineId Id="402" Count="0" />
+      <LineId Id="412" Count="0" />
+      <LineId Id="400" Count="1" />
+      <LineId Id="399" Count="0" />
+      <LineId Id="455" Count="0" />
+      <LineId Id="405" Count="0" />
+      <LineId Id="410" Count="0" />
+      <LineId Id="406" Count="0" />
+      <LineId Id="411" Count="0" />
+      <LineId Id="408" Count="1" />
+      <LineId Id="404" Count="0" />
+      <LineId Id="374" Count="0" />
+      <LineId Id="378" Count="6" />
+      <LineId Id="386" Count="8" />
+      <LineId Id="396" Count="0" />
+      <LineId Id="377" Count="0" />
+      <LineId Id="370" Count="0" />
+      <LineId Id="454" Count="0" />
+      <LineId Id="451" Count="2" />
+      <LineId Id="450" Count="0" />
+      <LineId Id="325" Count="4" />
+      <LineId Id="305" Count="0" />
+      <LineId Id="303" Count="0" />
+      <LineId Id="99" Count="5" />
+      <LineId Id="297" Count="1" />
+      <LineId Id="427" Count="1" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="425" Count="0" />
+      <LineId Id="301" Count="1" />
+      <LineId Id="296" Count="0" />
+      <LineId Id="105" Count="1" />
+      <LineId Id="424" Count="0" />
+      <LineId Id="422" Count="0" />
+      <LineId Id="120" Count="5" />
+      <LineId Id="127" Count="1" />
+      <LineId Id="421" Count="0" />
+      <LineId Id="420" Count="0" />
+      <LineId Id="141" Count="11" />
+      <LineId Id="431" Count="6" />
+      <LineId Id="171" Count="0" />
+      <LineId Id="438" Count="0" />
+      <LineId Id="172" Count="1" />
+      <LineId Id="176" Count="5" />
+      <LineId Id="440" Count="5" />
+      <LineId Id="439" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

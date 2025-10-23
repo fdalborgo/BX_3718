@@ -1,0 +1,224 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="PRG_MSSQL_spMyTest" Id="{6613c0fe-d3aa-4d9b-9f93-ea472f6dbe86}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_MSSQL_spMyTest
+VAR_INPUT
+	Execute					: BOOL;
+	Enable					: BOOL;
+END_VAR
+VAR_OUTPUT
+	Error					: BOOL;
+	ErrorID					: DINT;
+	Done					: BOOL;
+	Busy					: BOOL;
+	tcMessage 				: I_TcMessage;
+END_VAR
+VAR
+	RTRIG_Execute			: R_TRIG;
+	iState					: INT := -1;
+	return_value			: ARRAY[0..4] OF DINT;
+	DataGood				: ARRAY[0..4] OF BOOL;
+	DataError				: ARRAY[0..4] OF BOOL;
+END_VAR
+VAR_IN_OUT
+	fbSQLResult				: FB_SQLResultEvt;
+	fbSQLStoredProcedure	: FB_SQLStoredProcedureEvt;
+	fbSQLResult1				: FB_SQLResultEvt;
+	fbSQLStoredProcedure1	: FB_SQLStoredProcedureEvt;
+	fbSQLResult2				: FB_SQLResultEvt;
+	fbSQLStoredProcedure2	: FB_SQLStoredProcedureEvt;
+	fbSQLResult3				: FB_SQLResultEvt;
+	fbSQLStoredProcedure3	: FB_SQLStoredProcedureEvt;
+	fbSQLResult4				: FB_SQLResultEvt;
+	fbSQLStoredProcedure4	: FB_SQLStoredProcedureEvt;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Execute(CLK := Execute AND Enable);
+IF(RTRIG_Execute.Q) THEN
+	 Done							:= FALSE;
+	 Error							:= FALSE;
+	 ErrorID						:= 0; 
+	 MEMSET(ADR(DataGood), 0 , SIZEOF(DataGood));
+	 MEMSET(ADR(DataError), 0 , SIZEOF(DataError));
+	 Busy								:= TRUE;
+	 
+	 iState							:= 0;
+ELSIF NOT Execute AND NOT Busy THEN
+	Busy			:= FALSE;
+	Done			:= FALSE;
+	Error			:= FALSE;
+	
+	iState := -1;
+END_IF
+ 
+ CASE iState OF
+ 
+	 0:
+		iState 								:= 10;
+		
+		
+	10:
+		IF NOT DataGood[0] AND NOT DataError[0] THEN
+			IF fbSQLStoredProcedure.ExecuteDataReturn(pParameterStrc := ADR(return_value[0]), cbParameterStrc := SIZEOF(return_value[0]), pSQLDBResult := ADR(fbSQLResult)) THEN
+				IF fbSQLStoredProcedure.bError THEN
+					tcMessage := fbSQLStoredProcedure.ipTcResult;
+					DataError[0] := TRUE;
+					DataGood[0] := FALSE;
+				ELSE
+					DataError[0] := FALSE;
+					DataGood[0] := TRUE;					
+				END_IF    
+			END_IF
+		END_IF
+		
+		IF NOT DataGood[1] AND NOT DataError[1] THEN
+			IF fbSQLStoredProcedure1.ExecuteDataReturn(pParameterStrc := ADR(return_value[1]), cbParameterStrc := SIZEOF(return_value[1]), pSQLDBResult := ADR(fbSQLResult1)) THEN
+				IF fbSQLStoredProcedure1.bError THEN
+					tcMessage := fbSQLStoredProcedure1.ipTcResult;
+					DataError[1] := TRUE;
+					DataGood[1] := FALSE;
+				ELSE
+					DataError[1] := FALSE;
+					DataGood[1] := TRUE;					
+				END_IF    
+			END_IF
+		END_IF
+		
+		IF NOT DataGood[2] AND NOT DataError[2] THEN
+			IF fbSQLStoredProcedure2.ExecuteDataReturn(pParameterStrc := ADR(return_value[2]), cbParameterStrc := SIZEOF(return_value[2]), pSQLDBResult := ADR(fbSQLResult2)) THEN
+				IF fbSQLStoredProcedure2.bError THEN
+					tcMessage := fbSQLStoredProcedure2.ipTcResult;
+					DataError[2] := TRUE;
+					DataGood[2] := FALSE;
+				ELSE
+					DataError[2] := FALSE;
+					DataGood[2] := TRUE;					
+				END_IF    
+			END_IF
+		END_IF
+		
+		IF NOT DataGood[3] AND NOT DataError[3] THEN
+			IF fbSQLStoredProcedure3.ExecuteDataReturn(pParameterStrc := ADR(return_value[3]), cbParameterStrc := SIZEOF(return_value[3]), pSQLDBResult := ADR(fbSQLResult3)) THEN
+				IF fbSQLStoredProcedure3.bError THEN
+					tcMessage := fbSQLStoredProcedure3.ipTcResult;
+					DataError[3] := TRUE;
+					DataGood[3] := FALSE;
+				ELSE
+					DataError[3] := FALSE;
+					DataGood[3] := TRUE;					
+				END_IF    
+			END_IF
+		END_IF
+		
+		IF NOT DataGood[4] AND NOT DataError[4] THEN
+			IF fbSQLStoredProcedure4.ExecuteDataReturn(pParameterStrc := ADR(return_value[4]), cbParameterStrc := SIZEOF(return_value[4]), pSQLDBResult := ADR(fbSQLResult4)) THEN
+				IF fbSQLStoredProcedure4.bError THEN
+					tcMessage := fbSQLStoredProcedure4.ipTcResult;
+					DataError[4] := TRUE;
+					DataGood[4] := FALSE;
+				ELSE
+					DataError[4] := FALSE;
+					DataGood[4] := TRUE;					
+				END_IF    
+			END_IF
+		END_IF
+		
+		
+		IF DataError[0] OR DataError[1] OR DataError[2] OR DataError[3] OR DataError[4] THEN
+			iState 							:= 1010;
+		ELSIF DataGood[0] AND DataGood[1] AND DataGood[2] AND DataGood[3] AND DataGood[4] THEN
+			iState 							:= 20;
+		END_IF
+		
+	20:
+		IF fbSQLResult.Release() THEN
+			iState 								:= 21;		
+		END_IF
+		
+	21:
+		IF fbSQLResult1.Release() THEN
+			iState 								:= 22;		
+		END_IF	
+
+	22:
+		IF fbSQLResult2.Release() THEN
+			iState 								:= 23;		
+		END_IF	
+
+	23:
+		IF fbSQLResult3.Release() THEN
+			iState 								:= 24;		
+		END_IF
+
+	24:
+		IF fbSQLResult4.Release() THEN
+			iState 								:= 25;		
+		END_IF			
+	
+	25:
+		Done			:= TRUE;
+		Busy			:= FALSE;
+		
+ END_CASE 
+ 
+IF iState > 1000 OR iState <= -10000 THEN
+	Error 		:= TRUE;
+	ErrorID	 	:= iState; 
+	Busy	 	:= FALSE;
+	iState := -1;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="PRG_MSSQL_spMyTest">
+      <LineId Id="3947" Count="4" />
+      <LineId Id="4295" Count="1" />
+      <LineId Id="4400" Count="0" />
+      <LineId Id="3952" Count="5" />
+      <LineId Id="3960" Count="2" />
+      <LineId Id="3966" Count="3" />
+      <LineId Id="4119" Count="0" />
+      <LineId Id="4266" Count="0" />
+      <LineId Id="4121" Count="1" />
+      <LineId Id="4271" Count="0" />
+      <LineId Id="3977" Count="0" />
+      <LineId Id="3979" Count="1" />
+      <LineId Id="4113" Count="0" />
+      <LineId Id="4231" Count="0" />
+      <LineId Id="3983" Count="0" />
+      <LineId Id="4294" Count="0" />
+      <LineId Id="3994" Count="0" />
+      <LineId Id="3996" Count="1" />
+      <LineId Id="4277" Count="0" />
+      <LineId Id="4312" Count="0" />
+      <LineId Id="4314" Count="10" />
+      <LineId Id="4313" Count="0" />
+      <LineId Id="4325" Count="0" />
+      <LineId Id="4327" Count="10" />
+      <LineId Id="4326" Count="0" />
+      <LineId Id="4338" Count="0" />
+      <LineId Id="4340" Count="10" />
+      <LineId Id="4339" Count="0" />
+      <LineId Id="4351" Count="0" />
+      <LineId Id="4353" Count="10" />
+      <LineId Id="4352" Count="0" />
+      <LineId Id="4239" Count="0" />
+      <LineId Id="4280" Count="0" />
+      <LineId Id="4283" Count="1" />
+      <LineId Id="4287" Count="1" />
+      <LineId Id="4285" Count="0" />
+      <LineId Id="3998" Count="1" />
+      <LineId Id="4237" Count="1" />
+      <LineId Id="4007" Count="5" />
+      <LineId Id="4301" Count="0" />
+      <LineId Id="4298" Count="2" />
+      <LineId Id="4297" Count="0" />
+      <LineId Id="4303" Count="3" />
+      <LineId Id="4302" Count="0" />
+      <LineId Id="4308" Count="3" />
+      <LineId Id="4307" Count="0" />
+      <LineId Id="4027" Count="1" />
+      <LineId Id="4030" Count="8" />
+      <LineId Id="4040" Count="0" />
+      <LineId Id="3300" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

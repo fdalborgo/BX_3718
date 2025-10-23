@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="BytesToWString" Id="{54325149-1be5-4651-ae90-f9efb2c68139}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION BytesToWString : WSTRING(1)
+VAR_INPUT
+    byte1 : BYTE;
+    byte2 : BYTE;
+END_VAR
+VAR
+    charValue : WORD; // Valore del carattere Unicode
+    resultString : WSTRING(1);
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Combinare i due byte per formare un carattere Unicode
+charValue := byte2;
+charValue := SHL(charValue, 8)  + (byte1);
+
+// Usare una variabile temporanea per impostare il valore del carattere
+resultString := "";
+resultString[0] := charValue;
+
+BytesToWString := resultString;]]></ST>
+    </Implementation>
+    <LineIds Name="BytesToWString">
+      <LineId Id="17" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="18" Count="5" />
+      <LineId Id="7" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

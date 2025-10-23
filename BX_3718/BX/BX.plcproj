@@ -1,0 +1,1034 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <FileVersion>1.0.0.0</FileVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{33e39a89-d1fe-403f-9bd1-7237b2dded94}</ProjectGuid>
+    <SubObjectsSortedByName>True</SubObjectsSortedByName>
+    <DownloadApplicationInfo>true</DownloadApplicationInfo>
+    <WriteProductVersion>true</WriteProductVersion>
+    <GenerateTpy>false</GenerateTpy>
+    <Name>BX</Name>
+    <ProgramVersion>3.1.4024.0</ProgramVersion>
+    <Application>{db366991-bdc6-47b9-b2c6-0b4961bcea9b}</Application>
+    <TypeSystem>{c1579b1f-568e-4afc-8b0b-3db204ff0467}</TypeSystem>
+    <Implicit_Task_Info>{70a50e2c-9189-4aaa-9679-9c5753b4d840}</Implicit_Task_Info>
+    <Implicit_KindOfTask>{f7ceff66-062f-42ca-8cc9-17ac948eb0a5}</Implicit_KindOfTask>
+    <Implicit_Jitter_Distribution>{eb0e7273-70a5-42f7-a27d-5d412bd42c23}</Implicit_Jitter_Distribution>
+    <LibraryReferences>{6ae2f1d6-6975-406d-a5d9-0565b68eccb9}</LibraryReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="DUTs\00\DUT_HMI_00.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\00\DUT_HMI_00_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\01\DUT_HMI_01.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\01\DUT_HMI_01_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\02\DUT_HMI_02.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\02\DUT_HMI_02_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\03\DUT_HMI_03.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\03\DUT_HMI_03_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\04\DUT_HMI_04.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\04\DUT_HMI_04_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\05\DUT_HMI_05.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\05\DUT_HMI_05_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\06\DUT_HMI_06.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\06\DUT_HMI_06_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\07\DUT_HMI_07.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\07\DUT_HMI_07_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\08\DUT_HMI_08.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\08\DUT_HMI_08_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\09\DUT_HMI_09.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\09\DUT_HMI_09_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\10\DUT_HMI_10.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\10\DUT_HMI_10_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\11\DUT_HMI_11.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\11\DUT_HMI_11_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\12\DUT_HMI_12.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\12\DUT_HMI_12_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\13\DUT_HMI_13.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\13\DUT_HMI_13_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\14\DUT_HMI_14.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\14\DUT_HMI_14_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\15\DUT_HMI_15.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\15\DUT_HMI_15_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\16\DUT_HMI_16.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\16\DUT_HMI_16_MANUALS.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_AppendBatchToProductionQueue.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_ChangeBatchPositionInProductionQueue.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_CMD_ForceCompletedBatch.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_CMD_RecoverBatch.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_CMD_RestartBatch.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_GetBatchHistory.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_GetBatchHistoryDetail.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_GetBitting.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_CheckCutterAlreadyPresentOnDrums.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_GetSettingRepositoryByName.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_LogModeStateEvent.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stSPAlarm.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_UpdateBroachingProfileSettings.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_GetProfilesByFamilyName.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_UpdateCuttersOnDrum.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_GetResourcesByName.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_GetCuttersOnDrum.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_NextPartPLCData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_OutInfoOrigin.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_ProcessingDataForHMI.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_ResourcesByType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_SequenceByName.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_SetResourcesByName.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stBroachingPlanBase.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stBatchList.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stBroachingPlanVariants.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stDeleteBatchToProductionQueue.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stExternMarkingData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stGetPLCData_Buffer.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stMarkingData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stBroachingPlan.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stOrder.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stOrderItems.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stPLCData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stProcessingData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stProcessingHMIData1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stProcessingHMIData2.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_stUpdateBatchToProductionQueue.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_UpdateCutterData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_UpdatePartLocationsAndProcessingData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\DUT_UpdateSettingRepositoryByName.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\eDbPiecesStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\Mes\DUT_stMesOrder.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Database\Mes\DUT_stMesOrderItems.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_RobSetpoint_Real.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_XYZ_Real.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_XYZ_Int.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eDeviceType.TcTLEO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eLoadingMode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_Events.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eBroach.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_DataRequest.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_MachineData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_MATDiagnostics.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_St0Data.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_StationData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eConnectionSteps.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eEV_Status.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eHeaderPieces.TcTLEO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eIcon.TcTLEO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eMode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eProductStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eShiftPosMan.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eShiftPosPC100.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eState.TcTLEO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eStationData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\eStationState.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\ST_EventClassInfo.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\ST_FanucCNCEventAxesMask.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\ST_FanucCNCEventDetails.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\ST_FanucCNCEventEntryDetails.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\ST_FanucCNCEventSourceDetails.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\ST_FanucCNCEventSourceInfo.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\ST_FanucCNCEventSourceList.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\ST_FanucSourceDescriptor.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\U_FanucCNCEventEntry.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\U_FanucCNCEventInfo.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EventsMgt\U_FanucCNCEventSourceInfo.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HIM_ProscessingData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HIM_DeviceType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_Display.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_Events.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_EV_Diagnostic.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_EV_Info.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_General.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_General_Manuals.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_Header.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_In.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_In_Resource.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_MesManual.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_Navigation.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HIM_Probe.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_Out.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_Out_Resource.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_Production_Counters.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_Tools.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HMI\DUT_HMI_UPSStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Production\DUT_Production.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Production\DUT_Production_Counters.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Production\DUT_Production_OEE.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Production\DUT_Statistics.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Production\eOEE.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\stBit.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\stByteAsBit.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\stTestStringUnion.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\stFanucCNCKeyboard.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\stShiftData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DataBuffer.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\BytesToWString.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spAppendBatchToProductionQueueFromHMI.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spChangeBatchPositionInProductionQueue.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spCMD_ForceCompletedBatch.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spCMD_HoldBatch.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spCMD_RecoverBatch.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spCMD_RestartBatch.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spCMD_ResumeBatch.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spCMD_SuspendBatch.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spCMD_UnholdBatch.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spDeleteBatchToProductionQueue.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spAddProfile.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spDeleteCutter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spAddCutter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetBatchDetailById.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetBatchHistory.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetBatchHistoryByStatus.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetBatchHistoryDetail.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetBatchList.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetBlankKey.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetBlankKeyByName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spCheckCutterAlreadyPresentOnDrums.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetCuttersComboboxFormatted.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetCuttersFromFamilyName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spDeleteProfile.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetBroachingProfileSettings.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetSettingRepositoryByName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spUpdateBroachingProfileSettings.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetProfilesByFamilyName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetProfiles.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetCuttersOnDrum.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetFamilyNamesForCombobox.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spUpdateCuttersOnDrum.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetCuttersByName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetCuttersBySide.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetCutters.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetFormattedTablesFromSequences.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetMillings.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetMillingsByFamilyName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetMillingsByName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetOrderInfoList.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetOrderItems.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetOrigins.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetOriginsByName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetOriginsBySide.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetOriginsFromSequence.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetPartHistory.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetPartHistoryByBatchName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetResourcesByName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetResourcesByNameMilling.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetResourcesByType.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetResourcesListByType.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetSettingRepositoryList.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spGetSideCode.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spSetResourcesByName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spUpdateBatchToProductionQueue.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spUpdateCutterData.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\FB_MSSQL_spUpdateSettingRepositoryByName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\Mes\FB_MSSQL_spMES_GetOrderInfoList.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB\Mes\FB_MSSQL_spMES_GetOrderItems.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB_HMI_SP_Alarm.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\FB_ProcessingData.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_InitConnection.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_InitConnection_MyTest1.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_InitConnection_MyTest2.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_InitConnection_MyTest3.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_InitConnection_MyTest4.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_InitConnection_MyTest5.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_spCMD_AbortProduction.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_spMyTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_spLogModeStateEvent.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_spGetNextPartPLCData.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_spGetProcessingDataForHMI.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Database\PRG_MSSQL_UpdatePartLocationsAndProcessingData.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\DataRequest\FB_DataRequest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\DataRequest\FC_UnloadManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\DataRequest\FC_BroachingPlanCopyPass.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\DataRequest\FC_BroachingPlanCopyConpensation.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\DataRequest\FC_DataFind.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Ethernet\FB_ClientConnection.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Ethernet\FB_EthDevice.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Ethernet\FB_FrameFifo.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Events\FB_CheckFanucCNCActiveEvents.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Events\FB_CheckFanucPMCActiveEvents.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Events\FB_PMCEventCollectors.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\Events\I_EventDetailer.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_ButtonTrigger.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_DoublingTrigger.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_LoadingModeChange.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_OvrMng.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_PartDataManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_DataBufferManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_PneumaticActuator_2EV.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_PneumaticActuator_2EV_Diagnostic.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_Refresh.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_KillMultipleNavigationPS.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_RetainTimer.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_TriggerSequencer.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\FB_WriteTestFile.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\DUT_Job.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FB_FlyPowerMarkExeManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FB_Lasit.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FB_LasitManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FB_FlyPowerMarkManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_ACK.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_EOT.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_IN.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_J.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_K.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_R.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_S.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_SOH.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_STX.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\LaserMarker - LASIT\FC_Check_T.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\StringBuilder\clsStringBuilder.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\StringBuilder\I_LimitedStringBuilder.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FBs\StringBuilder\I_StringBuilder.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_AlarmExists.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_BYTE_TO_BOOLARR.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_BOOLARR_TO_BYTE.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_BOOLBYTE_TO_BYTE.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_BYTE_TO_BOOLBYTE.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_Concat4.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_CycleTimeToString.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_DT_TO_ISO8610.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_EnumSnakeCaseToString.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_HeaderCounters.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_MarkingLayoutSelection.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_myDTtoString.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_UpdatePieceCount.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_OvrManagement.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_PMCAlarmToBoolArray.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_PMCWarningToBoolArray.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_ProductStatus.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_ProductStatusDatabase.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_ProductStatusNoPresence.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_OeeSetUpdateCount.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_SetPartProgramNameByID.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_ToBoolArray.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_ToByte.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\FC_WIDP_TO_PPNAME.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\Inc.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FCs\Print.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\CNC.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="GVLs\DB.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="GVLs\EC.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="GVLs\ETH.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\G.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\HMI.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="PlcTask.TcTTO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Database.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\MAIN.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\MAIN_SERVICE.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PF_00_UPS.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PRG_Diagnostic.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PRG_EventManagement.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PRG_OEE.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServiceTask.TcTTO">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="DUTs" />
+    <Folder Include="DUTs\00" />
+    <Folder Include="DUTs\01" />
+    <Folder Include="DUTs\02" />
+    <Folder Include="DUTs\03" />
+    <Folder Include="DUTs\04" />
+    <Folder Include="DUTs\05" />
+    <Folder Include="DUTs\06" />
+    <Folder Include="DUTs\07" />
+    <Folder Include="DUTs\08" />
+    <Folder Include="DUTs\09" />
+    <Folder Include="DUTs\10" />
+    <Folder Include="DUTs\11" />
+    <Folder Include="DUTs\12" />
+    <Folder Include="DUTs\13" />
+    <Folder Include="DUTs\14" />
+    <Folder Include="DUTs\15" />
+    <Folder Include="DUTs\16" />
+    <Folder Include="DUTs\Database" />
+    <Folder Include="DUTs\Database\Mes" />
+    <Folder Include="DUTs\EventsMgt" />
+    <Folder Include="DUTs\HMI" />
+    <Folder Include="DUTs\DataTable" />
+    <Folder Include="DUTs\Production" />
+    <Folder Include="FBs\Database\FB" />
+    <Folder Include="FBs\Database\FB\Mes" />
+    <Folder Include="FBs\DataRequest" />
+    <Folder Include="FBs\Ethernet" />
+    <Folder Include="FBs\Events" />
+    <Folder Include="FBs\LaserMarker - LASIT" />
+    <Folder Include="FBs\Database" />
+    <Folder Include="FBs\StringBuilder" />
+    <Folder Include="GVLs" />
+    <Folder Include="FBs" />
+    <Folder Include="FCs" />
+    <Folder Include="VISUs" />
+    <Folder Include="POUs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PlaceholderReference Include="Tc2_IoFunctions">
+      <DefaultResolution>Tc2_IoFunctions, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_IoFunctions</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Math">
+      <DefaultResolution>Tc2_Math, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Math</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Standard">
+      <DefaultResolution>Tc2_Standard, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Standard</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_System">
+      <DefaultResolution>Tc2_System, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_System</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_TcpIp">
+      <DefaultResolution>Tc2_TcpIp, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_TcpIp</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Utilities">
+      <DefaultResolution>Tc2_Utilities, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Utilities</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_Database">
+      <DefaultResolution>Tc3_Database, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_Database</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_DynamicMemory">
+      <DefaultResolution>Tc3_DynamicMemory, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_DynamicMemory</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_EventLogger">
+      <DefaultResolution>Tc3_EventLogger, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_EventLogger</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_JsonXml">
+      <DefaultResolution>Tc3_JsonXml, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_JsonXml</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_Module">
+      <DefaultResolution>Tc3_Module, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_Module</Namespace>
+    </PlaceholderReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="BX.tmc">
+      <SubType>Content</SubType>
+    </None>
+  </ItemGroup>
+  <ProjectExtensions>
+    <PlcProjectOptions>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
+      <v n="Name">"&lt;ProjectRoot&gt;"</v>
+      <d n="SubKeys" t="Hashtable" />
+      <d n="Values" t="Hashtable" />
+    </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
+    </PlcProjectOptions>
+  </ProjectExtensions>
+</Project>

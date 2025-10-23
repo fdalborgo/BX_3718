@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_stExternMarkingData" Id="{a6de0923-529f-4483-b9ef-37b64130ce85}">
+    <Declaration><![CDATA[TYPE DUT_stExternMarkingData :
+STRUCT
+	FrontEnable : ARRAY[0..7] OF BOOL;
+	FrontText1 	: STRING(50);
+	FrontText2 	: STRING(50);
+	FrontText3 	: STRING(50);
+	FrontText4 	: STRING(50);
+	FrontText5 	: STRING(50);
+	FrontText6 	: STRING(50);
+	BackEnable 	: ARRAY[0..7] OF BOOL;
+	BackText1 	: STRING(50);
+	BackText2 	: STRING(50);
+	BackText3 	: STRING(50);
+	BackText4 	: STRING(50);
+	BackText5 	: STRING(50);
+	BackText6 	: STRING(50);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

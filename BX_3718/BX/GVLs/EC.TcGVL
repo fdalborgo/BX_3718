@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <GVL Name="EC" Id="{379aef52-4ae1-4c46-aed3-10c25936ce16}">
+    <Declaration><![CDATA[VAR_GLOBAL CONSTANT
+	sNetId : STRING := '192.168.2.200.1.1';
+	NUM_ROBOT_OFFSET : UINT := 4;
+	NUM_MAX_ROBOT_OVR : UINT := 100;
+	NUM_MAX_BROACH : UINT := 24;
+	NUM_MIN_BROACH : UINT := 1;
+END_VAR
+
+VAR_GLOBAL
+	EtherCAT_DevState AT %I* : UINT;
+	ProfiNET_DevState AT %I* : UINT;
+
+// FESTO	
+	AL671 AT %Q* : ARRAY[0..4] OF UINT; // EV1-EV27
+	AL673 AT %Q* : ARRAY[0..5] OF UINT; // EV28-EV55
+	
+// Override 
+	I_Ovr_CounterValue 		AT %I* : UINT;
+	I_Ovr_SetCounterDone 	AT %I* : BOOL;
+	
+	Q_Ovr_SetCounter 		AT %Q* : BOOL;
+	Q_Ovr_SetCounterValue 	AT %Q* : UINT;
+	
+	I_Ovr_Overflow			AT %I* : BOOL;
+	I_Ovr_Underflow			AT %I* : BOOL;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

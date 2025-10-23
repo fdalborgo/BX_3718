@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FC_DT_TO_ISO8610" Id="{060dd33e-0ba9-47f0-afda-12aac293f6a8}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_DT_TO_ISO8610 : STRING(39)
+VAR_INPUT
+	I_DT					: REFERENCE TO DT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[FC_DT_TO_ISO8610 := SYSTEMTIME_TO_ISO8601(DT_TO_SYSTEMTIME(I_DT), 0, FALSE, 0);
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_DT_TO_ISO8610">
+      <LineId Id="76" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="17" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

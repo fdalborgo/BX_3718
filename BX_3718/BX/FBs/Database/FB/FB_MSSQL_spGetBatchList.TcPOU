@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_MSSQL_spGetBatchList" Id="{b8ddcb6f-39b7-4d32-9a50-9af130172f01}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_MSSQL_spGetBatchList
+VAR_INPUT
+	Execute					: BOOL;
+	Enable					: BOOL;
+	Reset					: BOOL;
+	InputJson	: STRING(DB.MAX_STRING_SIZE);
+END_VAR
+VAR_OUTPUT
+	Error					: BOOL;
+	ErrorID					: DINT;
+	Done					: BOOL;
+	Busy					: BOOL;
+	tcMessage 				: I_TcMessage;
+	Q_tElapsedTime			: TIME;
+	Result					: STRING(DB.MAX_STRING_SIZE);
+	ResultOut				: DUT_stBatchList;
+END_VAR
+VAR
+	RTRIG_Execute			: R_TRIG;
+	RTRIG_Reset				: R_TRIG;
+	iState					: INT := -1;
+	TON_Read				: TON;
+END_VAR
+VAR_IN_OUT
+	fbSQLResult				: FB_SQLResultEvt;
+	fbSQLStoredProcedure	: FB_SQLStoredProcedureEvt;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Reset(CLK := Reset);
+IF RTRIG_Reset.Q AND Execute AND Error AND NOT Busy THEN
+	Execute := FALSE;
+END_IF
+
+ResultOut.InputJson := InputJson;
+RTRIG_Execute(CLK := Execute AND Enable);
+IF(RTRIG_Execute.Q) THEN
+	 Done							:= FALSE;
+	 Error							:= FALSE;
+	 ErrorID						:= 0;
+	 
+	 iState							:= 0;
+ELSIF NOT Execute AND NOT Busy THEN
+	Busy			:= FALSE;
+	Done			:= FALSE;
+	Error			:= FALSE;
+	
+	iState := -1;
+END_IF
+ 
+ // Elapsed Time
+ TON_Read(PT:= T#5S);
+ 
+ CASE iState OF
+ 
+	 0:
+	 		TON_Read.IN 						:= FALSE;
+			Busy								:= TRUE;
+			iState 								:= 10;
+		
+	10:
+		IF fbSQLStoredProcedure.ExecuteDataReturn(pParameterStrc := ADR(ResultOut), cbParameterStrc:= SIZEOF(ResultOut), pSQLDBResult := ADR(fbSqlResult)) THEN
+			TON_Read.IN := TRUE;
+			IF fbSQLStoredProcedure.bError THEN
+				tcMessage := fbSQLStoredProcedure.ipTcResult;
+				
+				iState 							:= 1010;
+			ELSE
+				iState 							:= 20;
+			END_IF    
+		END_IF
+		
+	20:
+		iState 							:= 999;
+		IF fbSQLResult.Read(0, fbSQLResult.nDataCount, ADR(Result), SIZEOF(Result), FALSE, TRUE) THEN
+			IF fbSQLResult.bError THEN
+				iState 							:= 1020;
+			ELSE
+				
+				iState 							:= 30;
+			END_IF
+		END_IF
+		
+	30: 
+		IF fbSQLResult.Release() THEN
+			iState 								:= 999;	
+		END_IF
+		
+	999:
+		TON_Read.IN 	:= FALSE;
+		Done			:= TRUE;
+		Busy			:= FALSE;
+		
+ END_CASE 
+ 
+IF iState > 1000 THEN
+	Error 		:= TRUE;
+	ErrorID	 	:= iState;
+	Busy	 	:= FALSE;
+	TON_Read.IN := FALSE;
+	iState := -1;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_MSSQL_spGetBatchList">
+      <LineId Id="281" Count="2" />
+      <LineId Id="279" Count="1" />
+      <LineId Id="252" Count="0" />
+      <LineId Id="3" Count="1" />
+      <LineId Id="6" Count="4" />
+      <LineId Id="129" Count="5" />
+      <LineId Id="128" Count="0" />
+      <LineId Id="12" Count="23" />
+      <LineId Id="203" Count="0" />
+      <LineId Id="36" Count="25" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

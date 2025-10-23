@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_UpdateCutterData" Id="{50cb172a-7a85-4e10-a23a-30db17808c7b}">
+    <Declaration><![CDATA[TYPE DUT_UpdateCutterData :
+STRUCT
+	Id		: DINT;
+	Data	: STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

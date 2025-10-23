@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FC_BOOLARR_TO_BYTE" Id="{f8c33bda-ceee-4eb4-9180-eed54a304c16}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_BOOLARR_TO_BYTE
+VAR_INPUT
+	pMyByte : POINTER TO BYTE; // Destination  
+	pMyBool : POINTER TO BOOL; // Source   
+	nSize	: UINT;               
+END_VAR
+VAR
+    i : UINT;                       
+	myByte :  BYTE; 
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[FOR i:= 0 TO nSize-1 BY 8 DO
+	myByte := FC_BOOLBYTE_TO_BYTE(ADR(pMyBool[i]));
+	MEMCPY(ADR(pMyByte[i/8]), ADR(myByte), SIZEOF(BYTE));
+END_FOR
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_BOOLARR_TO_BYTE">
+      <LineId Id="172" Count="0" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="174" Count="0" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="151" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

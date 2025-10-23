@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_MSSQL_spGetOriginsByName" Id="{8f421618-c9ed-47d2-9cba-087edf1aa5ff}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_MSSQL_spGetOriginsByName
+VAR_INPUT
+	Execute					: BOOL;
+	Enable					: BOOL;
+	Reset					: BOOL;
+	sName					: STRING(50);
+END_VAR
+VAR_OUTPUT
+	Error					: BOOL;
+	ErrorID					: DINT;
+	Done					: BOOL;
+	Busy					: BOOL;
+	tcMessage 				: I_TcMessage;
+	Q_tElapsedTime			: TIME;
+	Result					: STRING(DB.MAX_STRING_SIZE);
+END_VAR
+VAR
+	RTRIG_Execute			: R_TRIG;
+	RTRIG_Reset				: R_TRIG;
+	iState					: INT := -1;
+	TON_Read				: TON;
+	Parameters				: DUT_GetResourcesByName;
+END_VAR
+VAR_IN_OUT
+	fbSQLResult				: FB_SQLResultEvt;
+	fbSQLStoredProcedure	: FB_SQLStoredProcedureEvt;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Reset(CLK := Reset);
+IF RTRIG_Reset.Q AND Execute AND Error AND NOT Busy THEN
+	Execute := FALSE;
+END_IF
+
+Parameters.ResourceName :=  sName;
+RTRIG_Execute(CLK := Execute AND Enable);
+IF(RTRIG_Execute.Q) THEN
+	 Done							:= FALSE;
+	 Error							:= FALSE;
+	 ErrorID						:= 0;
+	 TON_Read.IN 						:= FALSE;
+	 
+	 iState							:= 0;
+ELSIF NOT Execute AND NOT Busy THEN
+	Busy			:= FALSE;
+	Done			:= FALSE;
+	Error			:= FALSE;
+	
+	iState := -1;
+END_IF
+ 
+ // Elapsed Time
+ TON_Read(PT:= T#5S);
+ 
+ CASE iState OF
+ 
+	 0:
+			Busy								:= TRUE;
+			TON_Read.IN := TRUE;
+			iState 								:= 10;
+		
+	10:
+		IF fbSQLStoredProcedure.ExecuteDataReturn(pParameterStrc := ADR(Parameters), cbParameterStrc:= SIZEOF(Parameters), pSQLDBResult := ADR(fbSqlResult)) THEN
+			
+			IF fbSQLStoredProcedure.bError THEN
+				tcMessage := fbSQLStoredProcedure.ipTcResult;
+				
+				iState 							:= 1010;
+			ELSE
+				iState 							:= 20;
+			END_IF    
+		END_IF
+		
+	20:
+		IF fbSQLResult.Read(0, fbSQLResult.nDataCount, ADR(Result), SIZEOF(Result), FALSE, TRUE) THEN
+			IF fbSQLResult.bError THEN
+				iState 							:= 1020;
+			ELSE
+				
+				iState 							:= 30;
+			END_IF
+		END_IF
+		
+	30: 
+		IF fbSQLResult.Release() THEN
+			Q_tElapsedTime := TON_Read.ET;
+			iState 								:= 999;	
+		END_IF
+		
+	999:
+		TON_Read.IN 	:= FALSE;
+		Done			:= TRUE;
+		Busy			:= FALSE;
+		
+ END_CASE 
+ 
+IF iState > 1000 THEN
+	Error 		:= TRUE;
+	ErrorID	 	:= iState;
+	Busy	 	:= FALSE;
+	TON_Read.IN := FALSE;
+	iState := -1;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_MSSQL_spGetOriginsByName">
+      <LineId Id="284" Count="2" />
+      <LineId Id="282" Count="1" />
+      <LineId Id="188" Count="67" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

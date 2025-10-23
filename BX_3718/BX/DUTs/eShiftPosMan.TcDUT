@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="eShiftPosMan" Id="{806f2b14-4b6e-456d-877e-9c9e908bf68f}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE eShiftPosMan :
+(
+	eSt0 := 0,
+	eSt1 := 1,
+	eSt2 := 2,
+	eSt3 := 3,
+	eSt4 := 4,
+	eSt5 := 5,
+	eSt6 := 6,
+	eSt7 := 7,
+	eSt8 := 8,
+	eSt9 := 9,
+	eSt10 := 10,
+	eSt11 := 11,
+	eSt12 := 12,
+	eSt13 := 13,
+	eSt14 := 14,
+	eSt15 := 15,
+	eSt16 := 16,
+	eSt17 := 17,
+	eSt18 := 18,
+	eSt19 := 19,
+	eSt20 := 20
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

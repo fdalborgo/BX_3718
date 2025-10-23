@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_Production" Id="{6474ebd9-1443-4880-a15a-55baf24def2e}">
+    <Declaration><![CDATA[TYPE DUT_Production :
+STRUCT
+	Counters				: DUT_Production_Counters; // Piece Counters
+	OEE						: DUT_Production_OEE; // OEE Parameters
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

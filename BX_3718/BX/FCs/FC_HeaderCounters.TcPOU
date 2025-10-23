@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_HeaderCounters" Id="{ad4e63d2-4c92-42fa-989d-94dfcbd48fdc}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_HeaderCounters : UDINT
+VAR_INPUT
+    In: STRING(50);
+	FindLeft : BOOL;
+END_VAR
+VAR
+	tempString	: T_MaxString;
+	Pos : INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[Pos := FIND(In, '/');
+IF FindLeft THEN
+	tempString := LEFT(In, LEN(In)-Pos);
+ELSE
+	tempString := RIGHT(In, LEN(In)-Pos);
+END_IF
+
+FC_HeaderCounters := STRING_TO_UDINT(tempString);
+	
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_HeaderCounters">
+      <LineId Id="7" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="53" Count="1" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="47" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

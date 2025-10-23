@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="stByteAsBit" Id="{4b2ba78e-161d-4012-83c1-6e8558000d90}">
+    <Declaration><![CDATA[TYPE stByteAsBit :
+UNION
+	aByte	: BYTE;
+	aBit	: stBit;
+END_UNION
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

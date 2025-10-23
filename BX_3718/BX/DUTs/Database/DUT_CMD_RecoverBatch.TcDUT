@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_CMD_RecoverBatch" Id="{2dbc18fc-664e-4cd7-868b-e9a363fed9f6}">
+    <Declaration><![CDATA[TYPE DUT_CMD_RecoverBatch:
+STRUCT  
+	return_value	: DINT;
+	Id	: STRING(50);
+	Mode	: STRING(50);
+END_STRUCT
+END_TYPE
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

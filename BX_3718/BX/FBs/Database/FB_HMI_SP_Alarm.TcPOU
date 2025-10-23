@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_HMI_SP_Alarm" Id="{a3e4b17a-19cc-41cb-9f79-0e5893d7606a}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_HMI_SP_Alarm
+VAR_INPUT
+	Error						: BOOL;
+	ErrorID						: DINT;
+	aAlarm						: POINTER TO FB_TcAlarm;
+	wAlarm						: POINTER TO DWORD;
+	SourceName					: STRING;
+	TcSourceInfo				: FB_TcSourceInfo;
+	TcEventLogger 				: FB_TcEventLogger;
+	EventId						: UDINT;
+END_VAR
+VAR
+	bResult : BOOL;
+	AlarmExist						: ARRAY[0..G.MAX_ALR] OF BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bResult := FALSE;
+IF Error THEN
+	CASE ErrorID OF
+		1010://Execute error
+			wAlarm^.2 := 1;
+			
+			IF NOT AlarmExist[2] THEN 
+				AlarmExist[2] := TRUE; 
+				bResult := FC_AlarmExists(SourceName, TcSourceInfo, TcEventLogger, aAlarm[2], TC_Events.DB_Alarm.A50102, (EventId + 2));
+			ELSE 
+				bResult := TRUE; 
+			END_IF
+			
+			IF bResult THEN
+				aAlarm[2].Raise(0);
+			END_IF
+		1020://read error
+			wAlarm^.3 := 1;
+			
+			IF NOT AlarmExist[3] THEN 
+				AlarmExist[3] := TRUE; 
+				bResult := FC_AlarmExists(SourceName, TcSourceInfo, TcEventLogger, aAlarm[3], TC_Events.DB_Alarm.A50103, (EventId + 3));
+			ELSE 
+				bResult := TRUE; 
+			END_IF
+			IF bResult THEN
+				aAlarm[3].Raise(0);	
+			END_IF
+		1999://Timeout
+			wAlarm^.1 := 1;
+			
+			IF NOT AlarmExist[1] THEN 
+				AlarmExist[1] := TRUE; 
+				bResult := FC_AlarmExists(SourceName, TcSourceInfo, TcEventLogger, aAlarm[1], TC_Events.DB_Alarm.A50101, (EventId + 1));
+			ELSE 
+				bResult := TRUE; 
+			END_IF
+			IF bResult THEN
+				aAlarm[1].Raise(0);
+			END_IF
+		ELSE // Generic
+			wAlarm^.0 := 1;
+			
+			IF NOT AlarmExist[0] THEN 
+				AlarmExist[0] := TRUE; 
+				bResult := FC_AlarmExists(SourceName, TcSourceInfo, TcEventLogger, aAlarm[0], TC_Events.DB_Alarm.A50100, (EventId + 0));
+			ELSE 
+				bResult := TRUE; 
+			END_IF
+			IF bResult THEN
+				aAlarm[0].ipArguments.Clear().AddDInt(ErrorID);
+				aAlarm[0].Raise(0);	
+			END_IF
+	END_CASE
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_HMI_SP_Alarm">
+      <LineId Id="1584" Count="0" />
+      <LineId Id="1284" Count="4" />
+      <LineId Id="1607" Count="0" />
+      <LineId Id="1613" Count="4" />
+      <LineId Id="1289" Count="1" />
+      <LineId Id="1292" Count="5" />
+      <LineId Id="1618" Count="4" />
+      <LineId Id="1298" Count="0" />
+      <LineId Id="1300" Count="1" />
+      <LineId Id="1310" Count="3" />
+      <LineId Id="1628" Count="4" />
+      <LineId Id="1314" Count="6" />
+      <LineId Id="1633" Count="4" />
+      <LineId Id="1321" Count="5" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

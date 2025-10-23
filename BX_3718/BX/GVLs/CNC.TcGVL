@@ -1,0 +1,109 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <GVL Name="CNC" Id="{a987a661-a5f9-4e96-b3f8-480dbfd11322}">
+    <Declaration><![CDATA[VAR_GLOBAL CONSTANT
+// Events
+	NUM_CNC_EVENTS 					: UINT := 5000;	
+	NUM_PMC_EVENTS 					: UINT := 4000;
+	NUM_MAX_CNC_ACTIVE_EVENTS 		: UINT := 50;
+	NUM_MAX_CNC_EVENT_SOURCES 		: UINT := 50;
+	NUM_MAX_STATION_ALARMS			: UINT := 80;
+	NUM_MAX_STATION_WARNINGS		: UINT := 16;
+	NUM_MAX_GENERAL_ALARMS			: UINT := 160;
+	NUM_MAX_GENERAL_WARNINGS		: UINT := 200;
+	NUM_00_ALARMS					: UINT := 300;
+	NUM_00_WARNINGS					: UINT := 100;
+	
+// Navigation
+	NUM_NAVIGATION_ITEMS 			: UINT := 3;	// Numero di byte scritti su pmc
+	
+// Keyboard layout	
+	NUM_MAX_CNC_KEYBOARD_FOR_BECKHOFF 	: UINT := 64;
+	NUM_MAX_CNC_KEYBOARD			: UINT := 8;
+
+// Buttons and leds	
+	NUM_MAX_CNC_BUTTONS_LEDS  		: UINT := 500;
+	
+// HS
+	NUM_HS_EACH_STATION				: UINT := 50;
+	
+// Number of stations
+	NUM_STATIONS					: UINT := 9;
+	NUM_DATA_POSITION				: UINT := 14;
+	
+	NUM_MAX_MANUALS_GENERAL 		: UINT := 480;
+	NUM_MAX_MANUALS_00 				: UINT := 320;
+	NUM_MAX_MANUALS_01 				: UINT := 80;
+	NUM_MAX_MANUALS_02 				: UINT := 80;
+	NUM_MAX_MANUALS_03 				: UINT := 80;
+	NUM_MAX_MANUALS_04 				: UINT := 80;
+	NUM_MAX_MANUALS_05 				: UINT := 80;
+	NUM_MAX_MANUALS_06 				: UINT := 80;
+	NUM_MAX_MANUALS_07 				: UINT := 80;
+	NUM_MAX_MANUALS_08 				: UINT := 80;
+	NUM_MAX_MANUALS_09 				: UINT := 80;
+	NUM_MAX_MANUALS_10 				: UINT := 80;
+	NUM_MAX_MANUALS_11 				: UINT := 80;
+	NUM_MAX_MANUALS_12 				: UINT := 80;
+	NUM_MAX_MANUALS_13 				: UINT := 80;
+	NUM_MAX_MANUALS_14 				: UINT := 80;
+	NUM_MAX_MANUALS_15 				: UINT := 80;
+	NUM_MAX_MANUALS_16 				: UINT := 80;
+	NUM_MAX_MANUALS_17 				: UINT := 80;
+	NUM_MAX_MANUALS_18 				: UINT := 80;
+	
+	IPAddress						: STRING := '192.168.1.1';
+END_VAR
+
+{attribute 'qualified_only'}
+VAR_GLOBAL
+	vKeyboard : stFanucCNCKeyboard;
+	MachineData	: DUT_MachineData;
+	MachineStatus : ARRAY[1..4] OF USINT;
+	DataRequestRead : DUT_DataRequest;
+	DataRequestWrite : DUT_DataRequest;
+	
+// MAT - Data exchange FOCAS-ADS
+// vKeyboard	
+	Q_R3900 AT %MB3000 	: ARRAY[0..(NUM_MAX_CNC_KEYBOARD-1)] OF BYTE; // vKeyboard - Keys Area 
+	MATDiagnostic_MB3000 : DUT_MATDiagnostics;
+	I_R3950 AT %MB3500 	: ARRAY[0..(NUM_MAX_CNC_KEYBOARD-1)] OF BYTE; // vKeyboard - Leds Area 
+	MATDiagnostic_MB3500 : DUT_MATDiagnostics;
+	
+// Buttons/Leds
+	Q_R4000 AT %MB14000 : ARRAY[0..(NUM_MAX_CNC_BUTTONS_LEDS-1)] OF BYTE; // Buttons
+	MATDiagnostic_MB14000 : DUT_MATDiagnostics;
+	I_R4500 AT %MB14500 : ARRAY[0..(NUM_MAX_CNC_BUTTONS_LEDS-1)] OF BYTE; // Leds
+	MATDiagnostic_MB14500 : DUT_MATDiagnostics;
+			
+// MachineData
+	I_E0000 AT %MB8000 : ARRAY[0..1999] OF BYTE;
+	MATDiagnostic_MB8000 : DUT_MATDiagnostics;
+	
+// St0 Data
+	St0Data AT %MB20000 : ARRAY[0..499] OF BYTE;
+	St0DataTemp : DUT_St0Data;
+	MATDiagnostic_MB20000 : DUT_MATDiagnostics;
+	
+// HS_write
+	HS_write AT %MB4000 : ARRAY[0..12] OF BYTE;
+	MATDiagnostic_MB4000 : DUT_MATDiagnostics;	
+
+// HS_read
+	HS_read AT %MB6000 : ARRAY[0..9] OF BYTE;
+	MATDiagnostic_MB6000 : DUT_MATDiagnostics;
+	
+// FlyPowerOn // scritto da MatManager
+	FlyPowerMarkOn	: BYTE;
+	
+// ProfiNET
+	Q_X400 	AT %Q* : ARRAY[0..99] OF BYTE; // ProfiNET - To CNC
+	Q_R2000 AT %Q* : ARRAY[0..199] OF BYTE; // ProfiNET - To CNC
+	Q_D2000 AT %Q* : ARRAY[0..199] OF BYTE; // ProfiNET - To CNC
+	
+	I_Y400 	AT %I* : ARRAY[0..99] OF BYTE; // ProfiNET - From CNC
+	I_R2200 AT %I* : ARRAY[0..199] OF BYTE; // ProfiNET - From CNC
+	I_D2200 AT %I* : ARRAY[0..199] OF BYTE; // ProfiNET - From CNC
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="stFanucCNCKeyboard" Id="{b3943476-3ad1-0b9a-3429-3888c2af0fa4}">
+    <Declaration><![CDATA[TYPE stFanucCNCKeyboard :
+STRUCT
+	PS: ARRAY[0..(NUM_MAX_CNC_KEYBOARD_FOR_BECKHOFF-1)] OF BOOL;
+	LS: ARRAY[0..(NUM_MAX_CNC_KEYBOARD_FOR_BECKHOFF-1)] OF BOOL;
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

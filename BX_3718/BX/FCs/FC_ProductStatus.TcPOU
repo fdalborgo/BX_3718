@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_ProductStatus" Id="{5e0bec4e-aa0b-473e-b9b1-6db8b30792e7}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_ProductStatus : eProductStatus
+VAR_INPUT
+	aByte					: stByteAsBit;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF aByte.aBit.b0 THEN
+	IF aByte.aBit.b1 THEN
+		FC_ProductStatus := eProductStatus.Scraped;
+	ELSIF aByte.aBit.b3 THEN
+		FC_ProductStatus := eProductStatus.Completed;
+	ELSIF aByte.aBit.b2 THEN
+		FC_ProductStatus := eProductStatus.Working;	
+	ELSE
+		FC_ProductStatus := eProductStatus.Present;
+	END_IF
+ELSE
+	FC_ProductStatus := eProductStatus.NotPresent;
+END_IF
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_ProductStatus">
+      <LineId Id="99" Count="0" />
+      <LineId Id="85" Count="7" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="93" Count="1" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="17" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

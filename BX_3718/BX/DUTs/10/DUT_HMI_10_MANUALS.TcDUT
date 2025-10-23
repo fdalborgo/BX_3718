@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_HMI_10_MANUALS" Id="{4eecdd07-21a1-4ad9-b2eb-b0af9e307a72}">
+    <Declaration><![CDATA[TYPE DUT_HMI_10_MANUALS :
+STRUCT
+	PS : ARRAY[0..CNC.NUM_MAX_MANUALS_10-1] OF BOOL;
+	LS : ARRAY[0..CNC.NUM_MAX_MANUALS_10-1] OF BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

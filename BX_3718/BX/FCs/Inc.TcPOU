@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="Inc" Id="{231dae03-7c76-4d0c-af81-6666a3accebe}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION Inc
+VAR_INPUT
+	In : POINTER TO DINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[In^ := In^ + 1;]]></ST>
+    </Implementation>
+    <LineIds Name="Inc">
+      <LineId Id="109" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

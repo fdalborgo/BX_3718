@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_OeeSetUpdateCount" Id="{1f06fba6-34a1-46a6-ad32-2f2eab99a685}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_OeeSetUpdateCount
+VAR_INPUT
+	aByte					: stByteAsBit;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF FC_ProductStatusNopresence(aByte) = eProductStatus.Completed THEN
+	G.OEE_bCountUpGood := TRUE;
+END_IF
+IF FC_ProductStatusNopresence(aByte) = eProductStatus.Scraped THEN
+	G.OEE_bCountUpBad := TRUE;
+END_IF	
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_OeeSetUpdateCount">
+      <LineId Id="109" Count="4" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="17" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

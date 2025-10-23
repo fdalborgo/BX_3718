@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_HMI_Navigation" Id="{93620d8f-0b04-482e-82a6-8c9096a11027}">
+    <Declaration><![CDATA[TYPE DUT_HMI_Navigation :
+STRUCT
+	PS : ARRAY[0..HMI.NUM_NAVIGATION_ITEMS-1] OF BOOL;
+	LS : ARRAY[0..HMI.NUM_NAVIGATION_ITEMS-1] OF BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_HIM_Probe" Id="{85d5d163-bb9e-4f0b-9725-b7909fc9c4e0}">
+    <Declaration><![CDATA[TYPE DUT_HIM_Probe :
+STRUCT
+	ActualProbeValue : REAL;
+	ActualEncoderValue : REAL;
+	Error	: BOOL;
+	UpperLimit	: REAL;
+	LowerLimit	: REAL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

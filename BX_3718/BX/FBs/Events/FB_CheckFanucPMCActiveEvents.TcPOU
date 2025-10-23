@@ -1,0 +1,360 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FB_CheckFanucPMCActiveEvents" Id="{366416b2-3cfc-4196-b11f-d5f232abe39e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_CheckFanucPMCActiveEvents
+VAR_INPUT
+	Enabled : BOOL;
+END_VAR
+VAR
+
+	{attribute 'hide'}
+	_PMCEvents : ARRAY[0..NUM_PMC_EVENTS] OF FB_TcAlarm;
+
+	{attribute 'hide'}
+	_CurrentPMCActiveAlarmList : REFERENCE TO ARRAY [0..NUM_PMC_EVENTS / 8 - 1] OF BYTE;
+
+	{attribute 'hide'}
+	_PreviousPMCActiveAlarmList : REFERENCE TO ARRAY [0..NUM_PMC_EVENTS / 8 - 1] OF BYTE;
+	
+	{attribute 'hide'}
+	_TcEventLogger : FB_TcEventLogger;	
+
+	{attribute 'hide'}
+	_TcSourceInfo : FB_TcSourceInfo;
+
+	{attribute 'hide'}
+	_CheckInterval : TIME;
+	
+	{attribute 'hide'}
+	_CheckTimer : TON;
+	
+	{attribute 'hide'}
+	_StartByte : UDINT := 0;
+
+	{attribute 'hide'}
+	_ByteLength : UDINT := 0;
+
+	{attribute 'hide'}
+	_EventClass : POINTER TO TcEventEntry;
+	
+	{attribute 'hide'}
+	_EventDetailer : I_EventDetailer;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[_CheckTimer();
+
+IF Enabled  AND (_CheckInterval > T#0MS) THEN
+	IF _CheckTimer.Q THEN
+		THIS^.UpdateActiveEventList();
+		_CheckTimer.IN := FALSE;
+	ELSE
+		_CheckTimer.IN := TRUE;
+	END_IF
+ELSE
+	_CheckTimer.IN := FALSE;
+END_IF]]></ST>
+    </Implementation>
+    <Method Name="BinarySearch" Id="{0db67990-7f6b-4564-a1f6-cf75b111392b}">
+      <Declaration><![CDATA[METHOD PRIVATE BinarySearch : BOOL
+VAR_INPUT
+	FirstByteIndex : UDINT;
+	LastByteIndex : UDINT;
+END_VAR
+VAR 
+	_i : UDINT;
+	_StateChanged : INT;
+	_EventIndex : UDINT;
+	_pTcEventEntry : POINTER TO TcEventEntry;
+	_MiddleByteIndex : UDINT;
+	_TcAlarm : FB_TcAlarm;
+	_refTcAlarm : REFERENCE TO FB_TcAlarm REF= _TcAlarm;
+	_hr : HRESULT;
+END_VAR
+
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF FirstByteIndex = LastByteIndex THEN
+	IF _PreviousPMCActiveAlarmList[FirstByteIndex] <> _CurrentPMCActiveAlarmList[FirstByteIndex] THEN
+		// Check every bit for change: (X = 2^BitPos)
+		// | Current | Previous | Current - Previous | StateChanged
+		// |    0     |    0    |         0          | No change
+		// |    0     |    1    |      -X < 0        | Event gone
+		// |    1     |    0    |       X > 0        | Event coming
+		// |    1     |    1    |         0          | No change
+		_pTcEventEntry := _EventClass;
+		FOR _i := 0 TO 7 DO
+			_StateChanged := BYTE_TO_INT(_CurrentPMCActiveAlarmList[FirstByteIndex] AND SHL(16#1, _i)) - BYTE_TO_INT(_PreviousPMCActiveAlarmList[FirstByteIndex] AND SHL(16#1, _i));
+			IF _StateChanged < 0 THEN
+				// Event gone
+				_EventIndex := (FirstByteIndex - _StartByte) * 8 + _i;
+				// Clear event
+				IF _PMCEvents[_EventIndex].bRaised THEN
+					_PMCEvents[_EventIndex].Clear(0, TRUE);
+				END_IF
+			END_IF
+			IF _StateChanged > 0 THEN
+				// Event coming
+				_EventIndex := (FirstByteIndex - _StartByte) * 8 + _i;
+				// Create event instance if not already created
+				IF _PMCEvents[_EventIndex].nUniqueId = 0 THEN
+					_PMCEvents[_EventIndex].CreateEx(_pTcEventEntry[_EventIndex], FALSE, GetSourceInfo());
+				END_IF
+				// Raise event (if not already raised)
+				IF NOT _PMCEvents[_EventIndex].bRaised THEN
+					SetParameters(_PMCEvents[_EventIndex]);
+					_PMCEvents[_EventIndex].Raise(0);
+				END_IF
+			END_IF		
+		END_FOR		
+	END_IF
+ELSE
+	_MiddleByteIndex := FirstByteIndex + LREAL_TO_UDINT(FLOOR((LastByteIndex - FirstByteIndex) / 2));
+	// Check first half (recursive)
+	IF MEMCMP(ADR(_PreviousPMCActiveAlarmList[FirstByteIndex]), ADR(_CurrentPMCActiveAlarmList[FirstByteIndex]), (_MiddleByteIndex + 1 - FirstByteIndex)) <> 0 THEN
+		THIS^.BinarySearch(FirstByteIndex, _MiddleByteIndex);
+	END_IF
+	// Check second half (recursive)
+	IF MEMCMP(ADR(_PreviousPMCActiveAlarmList[_MiddleByteIndex + 1]), ADR(_CurrentPMCActiveAlarmList[_MiddleByteIndex + 1]), (LastByteIndex - _MiddleByteIndex)) <> 0 THEN
+		THIS^.BinarySearch(_MiddleByteIndex + 1, LastByteIndex);
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ByteLength" Id="{ba0e0e44-6a99-46db-bfcd-d2d9dc117660}">
+      <Declaration><![CDATA[PROPERTY PUBLIC ByteLength : UDINT]]></Declaration>
+      <Get Name="Get" Id="{ee8c73c0-bfad-43c3-aebc-d2dd298ecd86}">
+        <Declaration><![CDATA[
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ByteLength := _ByteLength;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="CheckInterval" Id="{ff7af97a-54b3-42ef-96fe-0cbf6887177c}">
+      <Declaration><![CDATA[PROPERTY PUBLIC CheckInterval : TIME]]></Declaration>
+      <Get Name="Get" Id="{9826e459-244d-4862-8fdf-3ff2a5ed9483}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CheckInterval := _CheckInterval;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{1def6832-04fa-4bfb-b6f2-eb769b909536}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_CheckInterval := CheckInterval;
+_CheckTimer.PT := _CheckInterval;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="ClearAll" Id="{b7e4990b-45ce-4e3e-9c30-9b64fa7ed1db}">
+      <Declaration><![CDATA[METHOD PUBLIC ClearAll : BOOL
+VAR
+	_TcEventFilter : FB_TcEventFilter;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//_TcEventFilter.Clear().EventClass.EqualTo(_EventClass);
+//_TcEventLogger.ClearAlarms(0, FALSE, _TcEventFilter);
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FB_init" Id="{aa49f573-55e6-4ceb-81c2-e26c4103b74d}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	CheckInterval : TIME;
+	CurrentPMCActiveAlarmList : REFERENCE TO ARRAY [0..NUM_PMC_EVENTS / 8 - 1] OF BYTE;
+	PreviousPMCActiveAlarmList : REFERENCE TO ARRAY [0..NUM_PMC_EVENTS / 8 - 1] OF BYTE;
+	StartByte : UDINT;
+	ByteLength : UDINT;
+	SourceId : UDINT := 0;
+	SourceName : STRING[80] := '';
+	EventClass : POINTER TO TcEventEntry;
+	EventDetailer : I_EventDetailer;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_CheckInterval := CheckInterval;
+_CheckTimer.PT := _CheckInterval;
+
+_StartByte := StartByte;
+_ByteLength := ByteLength;
+
+_EventClass := EventClass;
+
+InitSource(SourceId, SourceName);
+
+IF __ISVALIDREF(CurrentPMCActiveAlarmList) THEN
+	_CurrentPMCActiveAlarmList REF= CurrentPMCActiveAlarmList;
+END_IF
+
+IF __ISVALIDREF(PreviousPMCActiveAlarmList) THEN
+	_PreviousPMCActiveAlarmList REF= PreviousPMCActiveAlarmList;
+END_IF
+
+_EventDetailer := EventDetailer;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="GetSourceInfo" Id="{dca7f43b-15db-4b2f-af78-b520178d5e2d}">
+      <Declaration><![CDATA[METHOD PRIVATE GetSourceInfo : I_TcSourceInfo
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[GetSourceInfo := _TcSourceInfo;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="InitSource" Id="{d11fd960-f94d-4882-8538-507e36de6b72}">
+      <Declaration><![CDATA[METHOD PRIVATE InitSource : BOOL
+VAR_INPUT
+	Id : UDINT;
+	Name : STRING(80);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_TcSourceInfo.Clear();
+_TcSourceInfo.nId := ID;
+_TcSourceInfo.sName := Name;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetParameters" Id="{62beee15-776d-4be5-a84e-18d8b626563b}">
+      <Declaration><![CDATA[METHOD PRIVATE SetParameters : BOOL
+VAR_INPUT
+	TcAlarm : REFERENCE TO FB_TcAlarm;
+END_VAR
+VAR
+	_Detail : STRING(512);
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _EventDetailer <> 0 THEN
+	_Detail := _EventDetailer.GetDetail(TcAlarm);
+END_IF
+
+TcAlarm.ipArguments.Clear();
+
+IF LEn(_Detail) <> 0 THEN
+	TcAlarm.ipArguments.AddString(_Detail);
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SourceId" Id="{d5859ef5-ad20-4be4-8863-64f1e78df115}">
+      <Declaration><![CDATA[PROPERTY PUBLIC SourceId : UDINT]]></Declaration>
+      <Get Name="Get" Id="{6a6fe61d-0c4b-40be-a497-fdce2d49bc8c}">
+        <Declaration><![CDATA[
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SourceId := _TcSourceInfo.nId;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="SourceName" Id="{9861a558-d899-476b-928a-3aebb6d15d60}">
+      <Declaration><![CDATA[PROPERTY PUBLIC SourceName : STRING(80)]]></Declaration>
+      <Get Name="Get" Id="{f1dea224-7c73-4ca3-aeb7-6d0e1d730157}">
+        <Declaration><![CDATA[
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SourceName := _TcSourceInfo.sName;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="StartByte" Id="{55236f07-e847-4099-b00f-3ef6be811643}">
+      <Declaration><![CDATA[PROPERTY PUBLIC StartByte : UDINT]]></Declaration>
+      <Get Name="Get" Id="{08eba585-fa6d-4d95-b6e4-8f0170363b19}">
+        <Declaration><![CDATA[
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StartByte := _StartByte;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="UpdateActiveEventList" Id="{217c2bc3-c55d-4c12-9db1-489a47570aee}">
+      <Declaration><![CDATA[METHOD PUBLIC UpdateActiveEventList : BOOL
+VAR
+	_i : UINT;
+	_j : UINT;
+	_Found : BOOL;	
+	_TcAlarm : FB_TcAlarm;
+	_refTcAlarm : REFERENCE TO FB_TcAlarm REF= _TcAlarm;
+	_iTcSourceInfo : I_TcSourceInfo;
+	_hr : HRESULT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF SIZEOF(_PreviousPMCActiveAlarmList) <> SIZEOF(_CurrentPMCActiveAlarmList) THEN
+	UpdateActiveEventList := FALSE;
+	RETURN;
+END_IF
+
+IF MEMCMP(ADR(_PreviousPMCActiveAlarmList) + _StartByte, ADR(_CurrentPMCActiveAlarmList) + _StartByte, _ByteLength) <> 0 THEN
+	
+	// Explore alarms and manage going and coming
+	IF SIZEOF(_CurrentPMCActiveAlarmList) > 0 THEN
+		BinarySearch(_StartByte, _StartByte + _ByteLength - 1);
+	END_IF
+	
+	// Update previous list with current list
+	MEMCPY(ADR(_PreviousPMCActiveAlarmList) + _StartByte, ADR(_CurrentPMCActiveAlarmList) + _StartByte, _ByteLength);
+
+END_IF
+
+UpdateActiveEventList := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents">
+      <LineId Id="3" Count="10" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.BinarySearch">
+      <LineId Id="3" Count="43" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.ByteLength.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.CheckInterval.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.CheckInterval.Set">
+      <LineId Id="3" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.ClearAll">
+      <LineId Id="3" Count="1" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.FB_init">
+      <LineId Id="3" Count="17" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.GetSourceInfo">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.InitSource">
+      <LineId Id="3" Count="1" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.SetParameters">
+      <LineId Id="3" Count="4" />
+      <LineId Id="15" Count="3" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.SourceId.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.SourceName.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.StartByte.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucPMCActiveEvents.UpdateActiveEventList">
+      <LineId Id="3" Count="16" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="U_FanucCNCEventSourceInfo" Id="{222bd233-f168-4d4b-8c8b-277714ef5572}">
+    <Declaration><![CDATA[TYPE U_FanucCNCEventSourceInfo :
+UNION
+	{attribute 'displaymode':='hex'}
+	Id : DWORD;
+	Details : ST_FanucCNCEventSourceDetails;
+END_UNION
+
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_FlyPowerMarkManager" Id="{26502597-14ae-42d2-8a73-1f4ca68823e0}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_FlyPowerMarkManager
+VAR_INPUT
+	In : BOOL;
+END_VAR
+VAR_OUTPUT
+	Out : BOOL;
+END_VAR
+VAR
+	RTRIG_Enable	: R_TRIG;
+	TON_DelayEnable	: TON;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TON_DelayEnable(IN := In, PT := T#1S);	
+RTRIG_Enable(CLK := TON_DelayEnable.Q);
+
+IF RTRIG_Enable.Q THEN
+	Out := TRUE;
+ELSIF NOT TON_DelayEnable.Q THEN
+	Out := FALSE;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_FlyPowerMarkManager">
+      <LineId Id="2302" Count="0" />
+      <LineId Id="2415" Count="0" />
+      <LineId Id="2418" Count="2" />
+      <LineId Id="2422" Count="1" />
+      <LineId Id="2417" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="eProductStatus" Id="{5593c8af-a750-4600-901d-92c6ac5a27f8}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE eProductStatus :
+(
+	Scraped 	:= -1,
+	NotPresent 	:= 0,
+	Present 	:= 1,
+	Working 	:= 2,
+	Completed 	:= 3
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

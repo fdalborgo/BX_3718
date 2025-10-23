@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_HMI_EV_Diagnostic" Id="{bef335ad-ddc5-43cd-8176-e7db73f79956}">
+    <Declaration><![CDATA[TYPE DUT_HMI_EV_Diagnostic :
+STRUCT
+	Enable	 : BOOL;
+	dFwdTime : UINT;
+	dBwdTime : UINT;
+	eStatus  : eEV_Status;
+	Error 	 : BOOL;	
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

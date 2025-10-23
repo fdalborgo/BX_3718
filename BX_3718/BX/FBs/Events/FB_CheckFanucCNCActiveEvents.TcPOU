@@ -1,0 +1,529 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FB_CheckFanucCNCActiveEvents" Id="{2aa3c1f9-e5c0-05dd-3be7-4421db219464}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_CheckFanucCNCActiveEvents
+VAR_INPUT
+	Enabled : BOOL;
+END_VAR
+VAR
+
+	{attribute 'hide'}
+	_CNCEvents : ARRAY[0..NUM_CNC_EVENTS] OF FB_TcAlarm;
+
+	{attribute 'hide'}
+	_CurrentCNCActiveEventList : REFERENCE TO ARRAY [1..NUM_MAX_CNC_ACTIVE_EVENTS] OF U_FanucCNCEventEntry;
+
+	{attribute 'hide'}
+	_PreviousCNCActiveEventList : ARRAY [1..NUM_MAX_CNC_ACTIVE_EVENTS] OF U_FanucCNCEventEntry;
+	
+	{attribute 'hide'}
+	_TcEventLogger : FB_TcEventLogger;	
+
+	{attribute 'hide'}
+	_CheckInterval : TIME;
+	{attribute 'hide'}
+	_CheckTimer : TON;
+	
+	{attribute 'hide'}
+	_LastCreatedEventIndex : UINT := 0;	
+	
+	_CNCEventSourceList : REFERENCE TO ST_FanucCNCEventSourceList;
+
+	_SourceInfoList : ARRAY [1..NUM_MAX_CNC_EVENT_SOURCES] OF FB_TcSourceInfo;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[_CheckTimer();
+
+IF Enabled AND (_CheckInterval > T#0MS) THEN
+	IF _CheckTimer.Q THEN
+		THIS^.UpdateActiveEventList();
+		_CheckTimer.IN := FALSE;
+	ELSE
+		_CheckTimer.IN := TRUE;
+	END_IF
+ELSE
+	_CheckTimer.IN := FALSE;
+END_IF]]></ST>
+    </Implementation>
+    <Method Name="BinarySearch" Id="{bcfda1cb-112e-0ddd-1b71-12dbb2327efb}">
+      <Declaration><![CDATA[METHOD PRIVATE BinarySearch : DINT;
+VAR_INPUT
+	_pTcEventEntry : POINTER TO TcEventEntry;
+	_EventId : UDINT;
+	_FirstIndex : UDINT;
+	_LastIndex : UDINT;
+END_VAR
+VAR 
+	_MiddleIndex : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _FirstIndex = _LastIndex THEN
+	IF _pTcEventEntry[_FirstIndex].nEventId = _EventId THEN
+		BinarySearch := UDINT_TO_DINT(_FirstIndex);
+	ELSE
+		BinarySearch := -1;
+	END_IF
+ELSE
+	_MiddleIndex := _FirstIndex + LREAL_TO_UDINT(FLOOR((_LastIndex - _FirstIndex) / 2));
+	IF _pTcEventEntry[_MiddleIndex].nEventId >= _EventId THEN
+		// Search on first half (recursive)
+		BinarySearch := THIS^.BinarySearch(_pTcEventEntry, _EventId, _FirstIndex, _MiddleIndex);
+	ELSE
+		// Search on second half (recursive)
+		BinarySearch := THIS^.BinarySearch(_pTcEventEntry, _EventId, _MiddleIndex + 1, _LastIndex);	
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="CheckInterval" Id="{bffa4260-49e0-0c56-37e5-dfd15189826d}">
+      <Declaration><![CDATA[PROPERTY PUBLIC CheckInterval : TIME]]></Declaration>
+      <Get Name="Get" Id="{13811d0c-9133-0ec9-1b29-6275c037b0b9}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CheckInterval := _CheckInterval;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{073ebb56-7494-0ca6-0e7a-54b8241f792c}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_CheckInterval := CheckInterval;
+_CheckTimer.PT := _CheckInterval;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="ClearAll" Id="{30f2b39e-da92-019c-213a-0c0a28a7d2f8}">
+      <Declaration><![CDATA[METHOD PUBLIC ClearAll : BOOL
+VAR
+	_TcEventFilter : FB_TcEventFilter;
+	_i : BYTE;
+	_EventClassInfo : ST_EventClassInfo;
+	_NullGUID : GUID;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR _i := 0 TO 31 DO
+	_EventClassInfo := GetEventClassInfo(_i);
+	IF NOT GuidsEqualByVal(_EventClassInfo.GUID, _NullGUID) THEN
+		_TcEventFilter.Clear().EventClass.EqualTo(_EventClassInfo.GUID);
+		_TcEventLogger.ClearAlarms(0, FALSE, _TcEventFilter);
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FB_init" Id="{917c388f-e667-0a39-0189-ed81b560ac1c}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	CheckInterval : TIME;
+	CurrentCNCActiveEventList : REFERENCE TO ARRAY [1..NUM_MAX_CNC_ACTIVE_EVENTS] OF U_FanucCNCEventEntry;
+	CNCEventSourceList : REFERENCE TO ST_FanucCNCEventSourceList;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_CheckInterval := CheckInterval;
+_CheckTimer.PT := _CheckInterval;
+
+IF __ISVALIDREF(CurrentCNCActiveEventList) THEN
+	_CurrentCNCActiveEventList REF= CurrentCNCActiveEventList;
+END_IF
+
+IF __ISVALIDREF(CNCEventSourceList) THEN
+	_CNCEventSourceList REF= CNCEventSourceList;
+END_IF
+
+//InitSources();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="GetEventClassInfo" Id="{96c78f02-ff1a-4e07-82ba-a93f717da91a}">
+      <Declaration><![CDATA[METHOD PRIVATE GetEventClassInfo : ST_EventClassInfo
+VAR_INPUT
+	ClassId : BYTE;
+END_VAR
+VAR
+	_NullGUID : GUID;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE ClassId OF
+	0:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_SW;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_SW);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_SW) / SIZEOF(TcEventEntry);
+	1:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_PW;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_PW);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_PW) / SIZEOF(TcEventEntry);
+	2:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_IO;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_IO);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_IO) / SIZEOF(TcEventEntry);
+	3:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_PS;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_PS);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_PS) / SIZEOF(TcEventEntry);
+	4:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_OT;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_OT);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_OT) / SIZEOF(TcEventEntry);
+	5:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_OH;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_OH);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_OH) / SIZEOF(TcEventEntry);
+	6:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_SV;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_SV);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_SV) / SIZEOF(TcEventEntry);
+	7:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_SR;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_SR);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_SR) / SIZEOF(TcEventEntry);
+	8:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_MC;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_MC);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_MC) / SIZEOF(TcEventEntry);
+	9:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_SP;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_SP);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_SP) / SIZEOF(TcEventEntry);
+	10:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_DS;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_DS);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_DS) / SIZEOF(TcEventEntry);
+	11:
+		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_IE;
+		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_IE);
+		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_IE) / SIZEOF(TcEventEntry);
+//	12:
+//		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_BG;
+//		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_BG);
+//		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_BG) / SIZEOF(TcEventEntry);
+//	13:
+//		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_SN;
+//		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_SN);
+//		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_SN) / SIZEOF(TcEventEntry);
+//	15:
+//		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_EX;
+//		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_EX);
+//		GetEventClassInfo.Count := SIZEOF(TC_Events.CNC_Alarms_EX) / SIZEOF(TcEventEntry);
+//	19:
+//		GetEventClassInfo.GUID := TC_EVENT_CLASSES.CNC_Alarms_BG;
+//		GetEventClassInfo.BaseAddress := ADR(TC_Events.CNC_Alarms_BG);
+//		GetEventClassInfo.v := SIZEOF(TC_Events.CNC_Alarms_BG / SIZEOF(TcEventEntry));
+	ELSE 
+		GetEventClassInfo.GUID := _NullGUID;
+		GetEventClassInfo.BaseAddress := 0;
+		GetEventClassInfo.Count := 0;		
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="GetSourceInfo" Id="{df2bba50-82a8-0ed1-3d0c-11e91f22fa98}">
+      <Declaration><![CDATA[METHOD PRIVATE GetSourceInfo : I_TcSourceInfo
+VAR_INPUT
+	SourceInfoId : DWORD;
+END_VAR
+VAR
+	_iTcSourceInfo : I_TcSourceInfo;
+	_Error : BOOL := FALSE;
+	_i: UINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Search for source
+FOR _i := 1 TO NUM_MAX_CNC_EVENT_SOURCES DO
+	IF SourceInfoId = _CNCEventSourceList.FanucCNCSources[_i].SourceId.Id THEN
+		GetSourceInfo := _SourceInfoList[_i];
+		RETURN;
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="GetSourceInfoIndex" Id="{27a0cae8-ff5d-4ccb-b12c-2e55754d16c7}">
+      <Declaration><![CDATA[METHOD PRIVATE GetSourceInfoIndex : UINT
+VAR_INPUT
+	{attribute 'displaymode':='hex'}
+	SourceInfoId : DWORD;
+END_VAR
+VAR
+	_i: UINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Search for source
+FOR _i := 1 TO NUM_MAX_CNC_EVENT_SOURCES DO
+	IF SourceInfoId = _CNCEventSourceList.FanucCNCSources[_i].SourceId.Id THEN
+		GetSourceInfoIndex := _i;
+		RETURN;
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="InitSources" Id="{1ea8b710-2fbb-0ca9-0859-c641358fa8a9}">
+      <Declaration><![CDATA[METHOD PRIVATE InitSources : BOOL
+VAR
+	_i : UINT;
+	_j : UINT;
+	_k : UINT;
+	_pTcEventEntry : POINTER TO TcEventEntry;
+	_EventCount : UINT := 0;
+	_SourceName : STRING;
+	_SourceNameSB : clsStringBuilder;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF __ISVALIDREF(_CNCEventSourceList) THEN
+	FOR _i := 1 TO NUM_MAX_CNC_EVENT_SOURCES DO
+		_SourceInfoList[_i].Clear();
+		_SourceInfoList[_i].nId := _i;
+		_SourceNameSB.Reset().Append(_CNCEventSourceList.FanucCNCSources[_i].CNCName).Append('.').Append(_CNCEventSourceList.FanucCNCSources[_i].PathName);
+		_SourceName := _SourceNameSB.ToString();
+		_SourceInfoList[_i].sName := _SourceName;
+		//_SourceInfoList[_i].sName := CONCAT(_FanucCNCSourceList.FanucCNCSources[_i].CNCName, CONCAT('.', _FanucCNCSourceList.FanucCNCSources[_i].PathName));
+	END_FOR
+END_IF
+
+
+//// Only for simulation
+//FOR _i := 1 TO 10 DO
+//	_FanucCNCSourceList.FanucCNCSources[_i].SourceId.Details.MainType := 1;
+//	_FanucCNCSourceList.FanucCNCSources[_i].SourceId.Details.SubType := 0;
+//	_FanucCNCSourceList.FanucCNCSources[_i].SourceId.Details.CNCNo := 1;
+//	_FanucCNCSourceList.FanucCNCSources[_i].SourceId.Details.PathNo := UINT_TO_BYTE(_i);
+//	_FanucCNCSourceList.FanucCNCSources[_i].CNCName := 'CNC1';
+//	_FanucCNCSourceList.FanucCNCSources[_i].PathName := CONCAT('Path', TO_STRING(_i));
+//	_FanucCNCSourceList.FanucCNCSources[_i].AxisNames[1] := CONCAT('X', TO_STRING(_i));
+//	_FanucCNCSourceList.FanucCNCSources[_i].AxisNames[2] := CONCAT('Y', TO_STRING(_i));
+//	_FanucCNCSourceList.FanucCNCSources[_i].AxisNames[3] := CONCAT('Z', TO_STRING(_i));
+//	_SourceInfoList[_i].Clear();
+//	_SourceInfoList[_i].nId := _i;
+//	_SourceInfoList[_i].sName := CONCAT(_FanucCNCSourceList.FanucCNCSources[_i].CNCName, CONCAT('.', _FanucCNCSourceList.FanucCNCSources[_i].PathName));
+//END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetParameters" Id="{31091be6-b270-0476-37a4-8ebaf70aee72}">
+      <Declaration><![CDATA[METHOD PRIVATE SetParameters : BOOL
+VAR_INPUT
+	TcAlarm : REFERENCE TO FB_TcAlarm;
+	FanucCNCEventSource : REFERENCE TO ST_FanucCNCEventSourceInfo;
+	AxisMask : ST_FanucCNCEventAxesMask;
+END_VAR
+VAR
+	_AxisList : STRING;
+	_AxisListSB : clsStringBuilder;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_AxisList := '';
+_AxisListSB.Reset();
+TcAlarm.ipArguments.Clear();
+
+IF __ISVALIDREF(FanucCNCEventSource) THEN
+
+	IF AxisMask.Axis_1 THEN
+		_AxisListSB.Append(FanucCNCEventSource.AxisNames[1]).Append(', ');
+	END_IF
+	IF AxisMask.Axis_2 THEN
+		_AxisListSB.Append(FanucCNCEventSource.AxisNames[2]).Append(', ');
+	END_IF
+	IF AxisMask.Axis_3 THEN
+		_AxisListSB.Append(FanucCNCEventSource.AxisNames[3]).Append(', ');
+	END_IF
+	IF AxisMask.Axis_4 THEN
+		_AxisListSB.Append(FanucCNCEventSource.AxisNames[4]).Append(', ');
+	END_IF
+	IF AxisMask.Axis_5 THEN
+		_AxisListSB.Append(FanucCNCEventSource.AxisNames[5]).Append(', ');
+	END_IF
+	IF AxisMask.Axis_6 THEN
+		_AxisListSB.Append(FanucCNCEventSource.AxisNames[6]).Append(', ');
+	END_IF
+	IF AxisMask.Axis_7 THEN
+		_AxisListSB.Append(FanucCNCEventSource.AxisNames[7]).Append(', ');
+	END_IF
+	IF AxisMask.Axis_8 THEN
+		_AxisListSB.Append(FanucCNCEventSource.AxisNames[8]).Append(', ');
+	END_IF
+	
+END_IF
+
+IF	_AxisListSB.Length > 0 THEN
+	_AxisListSB.Left(_AxisListSB.Length -2);
+	_AxisList := _AxisListSB.ToString();
+	TcAlarm.ipArguments.AddString(_AxisList);
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="UpdateActiveEventList" Id="{9e5b1981-f145-0ce7-22c0-4edd43ed3986}">
+      <Declaration><![CDATA[METHOD PRIVATE UpdateActiveEventList : BOOL
+VAR
+	_i : UINT;
+	_j : UINT;
+	_Found : BOOL;	
+	_TcAlarm : FB_TcAlarm;
+	_refTcAlarm : REFERENCE TO FB_TcAlarm REF= _TcAlarm;
+	_iTcSourceInfo : I_TcSourceInfo;
+	_hr : HRESULT;
+	_CNCNo : USINT;
+	_PathNo : USINT;
+	_pTcEventEntry : POINTER TO TcEventEntry;
+	_EventIndex : DINT;
+	_EventCount : UDINT;
+	_EventClassId : BYTE;
+	_EventId : UINT;
+	_EventClassInfo : ST_EventClassInfo;
+	_SourceInfoIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Check if previous and current memory areas for the list are same size
+IF SIZEOF(_PreviousCNCActiveEventList) <> SIZEOF(_CurrentCNCActiveEventList) THEN
+	UpdateActiveEventList := FALSE;
+	RETURN;
+END_IF
+
+// Compare previous and current memory areas for differences
+IF MEMCMP(ADR(_PreviousCNCActiveEventList), ADR(_CurrentCNCActiveEventList), SIZEOF(_CurrentCNCActiveEventList)) <> 0 THEN
+	
+	// In case of axes changing path during machining, the source needs to be updated at every change of active alarm list
+	InitSources();
+
+	// Check for events in previous list that are no longer active and clear them
+	FOR _i := 1 TO NUM_MAX_CNC_ACTIVE_EVENTS DO
+		IF _PreviousCNCActiveEventList[_i].Id <> 0 THEN
+			_Found := FALSE;
+			FOR _j := 1 TO NUM_MAX_CNC_ACTIVE_EVENTS DO
+				IF _PreviousCNCActiveEventList[_i].Id = _CurrentCNCActiveEventList[_j].Id THEN
+					_Found := TRUE;
+					EXIT;
+				END_IF
+			END_FOR
+			// If event previously active is no currently active: remove from list
+			IF NOT _Found THEN
+				_iTcSourceInfo := GetSourceInfo(_PreviousCNCActiveEventList[_i].Details.SourceInfo.Id);
+				_EventClassId := _PreviousCNCActiveEventList[_i].Details.EventInfo.Details.Category;
+				_EventId := _PreviousCNCActiveEventList[_i].Details.EventInfo.Details.No;
+				_EventClassInfo := GetEventClassInfo(_EventClassId);
+				IF _EventClassInfo.Count > 0 THEN 		// Event class contains no events
+					_hr := _TcEventLogger.GetAlarm(_EventClassInfo.GUID, _EventId, _iTcSourceInfo, _refTcAlarm);
+					IF SUCCEEDED(_hr) AND __ISVALIDREF(_refTcAlarm) THEN
+						IF _refTcAlarm.bRaised THEN
+							_refTcAlarm.Clear(0, TRUE);		// TODO: ResetConfirmation ??!!
+						END_IF
+					END_IF
+				END_IF
+			END_IF
+		END_IF
+	END_FOR
+	
+	// Check for events in current list that are not already active and raise them
+	FOR _i := 1 TO NUM_MAX_CNC_ACTIVE_EVENTS DO
+		IF _CurrentCNCActiveEventList[_i].Id <> 0 THEN
+			_Found := FALSE;
+			FOR _j := 1 TO NUM_MAX_CNC_ACTIVE_EVENTS DO
+				IF _CurrentCNCActiveEventList[_i].Id = _PreviousCNCActiveEventList[_j].Id THEN
+					_Found := TRUE;
+					EXIT;
+				END_IF
+			END_FOR
+			// If event currently active was not previously active: add to list
+			IF NOT _Found THEN
+				_SourceInfoIndex := GetSourceInfoIndex(_CurrentCNCActiveEventList[_i].Details.SourceInfo.Id);
+				//_iTcSourceInfo := GetSourceInfo(_CurrentCNCActiveEventList[_i].Details.SourceInfo.Id);
+				_iTcSourceInfo := _SourceInfoList[_SourceInfoIndex];
+				_CNCNo := _CurrentCNCActiveEventList[_i].Details.SourceInfo.Details.CNCNo;
+				_PathNo := _CurrentCNCActiveEventList[_i].Details.SourceInfo.Details.PathNo;
+				_EventClassId := _CurrentCNCActiveEventList[_i].Details.EventInfo.Details.Category;
+				_EventId := _CurrentCNCActiveEventList[_i].Details.EventInfo.Details.No;
+				_EventClassInfo := GetEventClassInfo(_EventClassId);
+				
+				IF _EventClassInfo.Count > 0 THEN 		// Event class contains no events
+
+					_hr := _TcEventLogger.GetAlarm(_EventClassInfo.GUID, _EventId, _iTcSourceInfo, _refTcAlarm);
+					
+					// Create event if not already created
+					IF NOT SUCCEEDED(_hr) THEN
+						_pTcEventEntry := _EventClassInfo.BaseAddress;
+						_EventCount := _EventClassInfo.Count;
+						_EventIndex := BinarySearch(_pTcEventEntry, _EventId, 0, _EventCount - 1);
+						IF _EventIndex >= 0 THEN
+							//CNC[_CNCNo].Paths[_PathNo].Alarms[_EventIndex].CreateEx(_pTcEventEntry[_EventIndex], FALSE, _iTcSourceInfo);	// TODO: NON SERVE!?! Eliminare?!
+							_LastCreatedEventIndex := _LastCreatedEventIndex + 1;						
+							_CNCEvents[_LastCreatedEventIndex].CreateEx(_pTcEventEntry[_EventIndex], FALSE, _iTcSourceInfo);
+							_hr := _TcEventLogger.GetAlarm(_EventClassInfo.GUID, _EventId, _iTcSourceInfo, _refTcAlarm);
+						END_IF
+					END_IF
+					
+					IF SUCCEEDED(_hr) AND __ISVALIDREF(_refTcAlarm) THEN
+						IF NOT _refTcAlarm.bRaised THEN
+							_SourceInfoIndex := GetSourceInfoIndex(_CurrentCNCActiveEventList[_i].Details.SourceInfo.Id);
+							SetParameters(_refTcAlarm, _CNCEventSourceList.FanucCNCSources[_SourceInfoIndex], _CurrentCNCActiveEventList[_i].Details.EventInfo.Details.AxesMask);
+							_refTcAlarm.Raise(0);
+						END_IF
+					END_IF
+					
+				END_IF
+					
+			END_IF
+		END_IF
+	END_FOR
+	
+	// Update previous list with current list
+	MEMCPY(ADR(_PreviousCNCActiveEventList), ADR(_CurrentCNCActiveEventList), SIZEOF(_CurrentCNCActiveEventList));
+
+END_IF
+
+UpdateActiveEventList := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents">
+      <LineId Id="3" Count="10" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.BinarySearch">
+      <LineId Id="3" Count="14" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.CheckInterval.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.CheckInterval.Set">
+      <LineId Id="3" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.ClearAll">
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.FB_init">
+      <LineId Id="3" Count="10" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.GetEventClassInfo">
+      <LineId Id="3" Count="68" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.GetSourceInfo">
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.GetSourceInfoIndex">
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.InitSources">
+      <LineId Id="3" Count="25" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.SetParameters">
+      <LineId Id="3" Count="38" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CheckFanucCNCActiveEvents.UpdateActiveEventList">
+      <LineId Id="3" Count="96" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

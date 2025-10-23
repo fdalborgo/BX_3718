@@ -1,0 +1,293 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_LasitManager" Id="{9a84605c-c239-4624-b985-7e182ffaccda}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_LasitManager
+VAR_INPUT
+	Init			: BOOL;
+	Disable			: BOOL;
+	Execute			: BOOL;
+	TimeoutCycle	: TIME;		// Tempo per timeout ciclo
+END_VAR
+VAR_OUTPUT
+	Busy					: BOOL  := FALSE; // Ciclo di marcatura in corso
+	Done					: BOOL  := FALSE; // Ciclo di marcatura terminato
+	Error					: BOOL  := FALSE; 
+	ErrorID					: INT 	:= 0; // -1: Timeout ciclo // 1020: Timeout caricamento layout // 1050: Timeout caricamento stringa // 1090: Marcatore in allarme 
+	ErrorSubID				: INT 	:= 0;
+END_VAR
+VAR_IN_OUT
+	MarkingData : DUT_stMarkingData;
+	fblasit	: FB_Lasit;
+END_VAR
+VAR
+	LastString			: ARRAY[1..9] OF T_MaxString;
+	LastLayout			: SINT;
+	i						: USINT;
+	CmdIndex				: SINT;
+	sCmdIndex				: T_MaxString;
+	_iState					: INT 	:= -1;
+	_RTRIG_Execute			: R_TRIG;
+	_TON_TimeoutCycle		: TON;
+	_TON_TimeoutTcpCmd		: TON;		// Timeout comando tcp (caricamento layout o testo da marcare)
+	_TON_DelayBetweenCmd	: TON;		// Attesa tra l'invio di più comandi sia tcp che cablati
+	JobList					: ARRAY[1..30] OF DUT_Job;
+	ActualString			: ARRAY[1..9] OF T_MaxString;
+	ActualIndex				: ARRAY[1..9] OF T_MaxString;
+	NumberOfCmd				: USINT;
+	tempLayout				: STRING(50);
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Init	THEN
+	M_Init();
+END_IF
+
+_TON_TimeoutCycle(IN:= Busy AND TimeoutCycle <> T#0MS, PT := TimeoutCycle);
+_TON_TimeoutTcpCmd(PT := T#2S);
+_TON_DelayBetweenCmd(PT := T#500MS);
+
+IF _TON_TimeoutCycle.Q THEN
+	ErrorSubID := _iState;
+	_iState := 1999;
+END_IF
+
+// EXECUTE
+_RTRIG_Execute(CLK := Execute);
+IF _RTRIG_Execute.Q AND NOT Busy THEN
+	Busy			:= TRUE;
+	ErrorID			:= 0;
+	ErrorSubID		:= 0;
+	_TON_DelayBetweenCmd.IN := FALSE;
+	
+	_iState			:= 0;
+ELSIF NOT Execute AND NOT Busy THEN
+	Busy			:= FALSE;
+	Done	:= FALSE; 
+	Error	:= FALSE; 
+	
+	_iState			:= -1;	
+END_IF
+
+// CYCLE //////////////////////////////////////////////////////////////////////////////////////////////////////	
+CASE _iState OF
+	0:	
+		IF Disable THEN
+			_iState			:= 999;
+		ELSIF NOT fblasit.bConnected THEN
+			_iState			:= 1000;
+		ELSE
+			ActualString[1] := LEFT(MarkingData.ProfileLaser,3);
+			ActualString[2] := RIGHT(MarkingData.ProfileLaser,2);
+			ActualString[3] := LEFT(MarkingData.ProfileLaser,3);
+			ActualString[4] := RIGHT(MarkingData.ProfileLaser,2);
+				
+			i := 0;
+			tempLayout := 'Job_1';
+			
+			_iState			:= 10;
+		END_IF
+
+		
+	10:
+		CmdIndex := M_FindJobIndex(tempLayout);
+		IF CmdIndex > 0 THEN
+			_iState			:= 20;
+		ELSE
+			_iState			:= 1010;
+		END_IF
+		
+	20:
+		IF CmdIndex <> LastLayout THEN
+			sCmdIndex := SINT_TO_STRING(CmdIndex);
+			fblasit.JobChoice(I_Layout := sCmdIndex);
+			_TON_TimeoutTcpCmd.IN 	:= TRUE;
+			
+			_iState	:= 30;	
+		ELSE
+			_TON_DelayBetweenCmd.IN := TRUE;
+			_iState	:= 40;	
+		END_IF
+		
+	30:
+		IF fblasit.JobChoice_Done() THEN
+			_TON_TimeoutTcpCmd.IN	:= FALSE;
+			_TON_DelayBetweenCmd.IN := TRUE;
+			LastLayout := CmdIndex;
+			MEMSET(ADR(LastString), 0 , SIZEOF(LastString));
+			
+			_iState := 40;
+		ELSIF _TON_TimeoutTcpCmd.Q THEN
+			_TON_TimeoutTcpCmd.IN := FALSE;
+			
+			_iState		:= 1030;
+		END_IF
+
+	40:
+		FOR i := 1 TO 9 DO
+			IF ActualString[i] <> LastString[i] THEN
+				EXIT;
+			END_IF
+		END_FOR
+		IF _TON_DelayBetweenCmd.Q THEN
+			_TON_DelayBetweenCmd.IN := FALSE;
+			NumberOfCmd := 0;
+			
+			_iState			:= 50;
+		END_IF
+		
+	50:		
+		IF i <= 9 THEN
+			FOR i := 1 TO 9 DO
+				IF JobList[CmdIndex].IndexDynamicCmd[i] THEN
+					ActualIndex[i] := USINT_TO_STRING(i);
+					NumberOfCmd := NumberOfCmd + 1;
+				ELSE
+					ActualIndex[i] := '';
+				END_IF
+			END_FOR	
+
+			NumberOfCmd := MIN(NumberOfCmd, 9);		
+			
+			_iState	:= 60;	
+		ELSE
+				
+			_iState	:= 999;	
+		END_IF
+		
+	60:
+		fblasit.MultyDynamicCmd(I_NumberOfCmd:=  NumberOfCmd, I_Id := ActualIndex, I_Text := ActualString);
+		_TON_TimeoutTcpCmd.IN 	:= TRUE;	
+		
+		_iState		:= 70;
+
+	70:
+		IF fblasit.DynamicCmd_Done() THEN
+			LastString		:= ActualString;
+			_TON_TimeoutTcpCmd.IN	:= FALSE;
+	
+			_iState		:= 999;
+		ELSIF _TON_TimeoutTcpCmd.Q THEN
+			_TON_TimeoutTcpCmd.IN := FALSE;
+			
+			_iState		:= 1070;
+		END_IF
+		
+	999:
+		
+		Busy := FALSE;
+		Done := TRUE;
+		
+END_CASE
+	
+	
+// ERROR
+IF (_iState > 999) THEN
+	Busy			:= FALSE;
+	ErrorID 		:= SEL(_TON_TimeoutCycle.Q, _iState, -1);
+	Done	:= FALSE;
+	Error := TRUE;
+	_iState			:= -1;
+END_IF]]></ST>
+    </Implementation>
+    <Method Name="M_FindJobIndex" Id="{aea23227-c4a1-49e3-a8be-ed39503f877c}">
+      <Declaration><![CDATA[METHOD PRIVATE M_FindJobIndex : SINT
+VAR_INPUT
+	LayoutName 		: STRING(50);
+END_VAR
+VAR
+	i : USINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR i := 1 TO 30 DO
+	IF JobList[i].JobName = LayoutName THEN
+		EXIT;
+	END_IF
+END_FOR
+IF i > 30 THEN
+	M_FindJobIndex := -1;
+ELSE
+	M_FindJobIndex := USINT_TO_SINT(JobList[i].JobIndex);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Init" Id="{b7c5cbd1-85f3-4d5a-9955-d904fd39627e}">
+      <Declaration><![CDATA[METHOD PRIVATE M_Init : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(JobList), 0, SIZEOF(JobList));
+JobList[1].JobName := 'Job_1';
+
+//Job_1
+JobList[1].JobIndex := 1;
+JobList[1].IndexDynamicCmd[1] := TRUE;
+JobList[1].IndexDynamicCmd[2] := TRUE;
+JobList[1].IndexDynamicCmd[3] := TRUE;
+JobList[1].IndexDynamicCmd[4] := TRUE;
+JobList[1].IndexDynamicCmd[5] := FALSE;
+JobList[1].IndexDynamicCmd[6] := FALSE;
+JobList[1].IndexDynamicCmd[7] := FALSE;
+JobList[1].IndexDynamicCmd[8] := FALSE;
+JobList[1].IndexDynamicCmd[9] := FALSE;
+JobList[1].IndexDynamicCmd[10] := FALSE;
+
+
+
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_LasitManager">
+      <LineId Id="2153" Count="6" />
+      <LineId Id="2337" Count="0" />
+      <LineId Id="2336" Count="0" />
+      <LineId Id="2413" Count="0" />
+      <LineId Id="2338" Count="1" />
+      <LineId Id="2160" Count="5" />
+      <LineId Id="2414" Count="0" />
+      <LineId Id="2166" Count="5" />
+      <LineId Id="2174" Count="13" />
+      <LineId Id="2191" Count="0" />
+      <LineId Id="2341" Count="0" />
+      <LineId Id="2340" Count="0" />
+      <LineId Id="2192" Count="1" />
+      <LineId Id="2377" Count="0" />
+      <LineId Id="2376" Count="0" />
+      <LineId Id="2195" Count="101" />
+      <LineId Id="2300" Count="0" />
+      <LineId Id="2302" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_LasitManager.M_FindJobIndex">
+      <LineId Id="5" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="15" Count="1" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="17" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_LasitManager.M_Init">
+      <LineId Id="284" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="111" Count="8" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="62" Count="1" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="17" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

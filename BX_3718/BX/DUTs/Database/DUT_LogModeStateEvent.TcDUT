@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_LogModeStateEvent" Id="{04f968f9-02eb-40d3-9e1e-ac2619456f3e}">
+    <Declaration><![CDATA[TYPE DUT_LogModeStateEvent :
+STRUCT
+	return_value 	: DINT;
+	EventId			: LINT;
+	EventTimeStamp  : DT;
+	EventType       : DINT;
+	Mode            : DINT;
+	State           : DINT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

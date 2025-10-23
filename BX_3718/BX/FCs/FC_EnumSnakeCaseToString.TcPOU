@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FC_EnumSnakeCaseToString" Id="{1a3a7ee8-7015-4732-b624-c94e7babd9d3}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_EnumSnakeCaseToString : STRING
+VAR_INPUT
+	I_String	: T_MaxString; // Use TO_STRING(eNum) to convert the input enum. For empty string set enum = eNull
+END_VAR
+VAR
+	pos			: INT;				
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF I_String <> 'eNull' THEN
+	IF LEFT(I_String, 1) = 'e' THEN
+		I_String := DELETE(I_String, 1, 1);
+	END_IF
+	pos := FIND(I_String, '_');
+	WHILE pos <> 0 DO
+		I_String := REPLACE(I_String, ' ', 1, pos);
+		pos := FIND(I_String, '_');
+	END_WHILE
+	FC_EnumSnakeCaseToString := I_String;
+ELSE
+	FC_EnumSnakeCaseToString := '';
+END_IF
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_EnumSnakeCaseToString">
+      <LineId Id="145" Count="0" />
+      <LineId Id="124" Count="0" />
+      <LineId Id="139" Count="1" />
+      <LineId Id="158" Count="0" />
+      <LineId Id="154" Count="0" />
+      <LineId Id="156" Count="1" />
+      <LineId Id="153" Count="0" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="146" Count="2" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="17" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

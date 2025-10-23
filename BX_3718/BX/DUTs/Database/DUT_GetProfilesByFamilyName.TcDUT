@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_GetProfilesByFamilyName" Id="{d3108dbf-6503-46c4-829f-5fbfd0e4dfd7}">
+    <Declaration><![CDATA[TYPE DUT_GetProfilesByFamilyName :
+STRUCT
+	FamilyName		: STRING(30);
+	JsonResult	: STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_CMD_RestartBatch" Id="{3231ecd2-599f-491d-9ac7-cd3469952a10}">
+    <Declaration><![CDATA[TYPE DUT_CMD_RestartBatch:
+STRUCT  
+	return_value	: DINT;
+	Id	: STRING(50);
+	Mode	: STRING(50);
+	RestartMode	: STRING(50);
+END_STRUCT
+END_TYPE
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

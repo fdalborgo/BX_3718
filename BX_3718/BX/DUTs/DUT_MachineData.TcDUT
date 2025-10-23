@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_MachineData" Id="{a48986e6-c0d0-4f3a-b08c-47ddf64df6dd}">
+    <Declaration><![CDATA[TYPE DUT_MachineData :
+STRUCT
+	aBool	: ARRAY[0..79] OF BOOL; 	//10 byte -> 80 bool
+	aByte	: ARRAY[0..10] OF USINT;	//10 byte -> 10 usint
+	aWord	: ARRAY[0..14] OF UINT;		//60 byte -> 15 uint
+	aSt	: ARRAY[1..19] OF DUT_StationData;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

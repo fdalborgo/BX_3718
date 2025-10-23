@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_HMI_09" Id="{809f5393-5b88-4b81-9116-dba8ff8af58b}">
+    <Declaration><![CDATA[TYPE DUT_HMI_09 :
+STRUCT
+	Manuals : DUT_HMI_09_MANUALS;
+	ProductStatus 	: eProductStatus;
+	TON_DelayProductStatus : TON;
+	RTRIG_ProductStatus : R_TRIG;
+	State			: eStationState;
+	EVDiagnostic 	: ARRAY[0..20] OF DUT_HMI_EV_Diagnostic;
+	EVInfo			: ARRAY[0..CNC.NUM_MAX_MANUALS_09-1] OF DUT_HMI_EV_Info;
+	Status			: USINT;
+	CycleTime		: STRING;
+	BroachTarget	: USINT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

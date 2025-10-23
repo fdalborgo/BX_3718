@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_BroachingPlanCopyConpensation" Id="{c1d35c4d-c386-4b8e-957e-76fd648298e6}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_BroachingPlanCopyConpensation
+VAR_INPUT
+	pDWord : POINTER TO DWORD;
+	BaseBroachingPlan 		: DUT_stBroachingPlanBase;     
+    VariantsBroachingPlan	: DUT_stBroachingPlanVariants;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[			// correzioni master 
+			pDWord[0] := REAL_TO_DWORD(BaseBroachingPlan.ToolHolderBase_AngleCompensation * 1000.0);
+			pDWord[1] := REAL_TO_DWORD(BaseBroachingPlan.ToolHolderBase_LateralCompensation * 1000.0);
+			pDWord[2] := REAL_TO_DWORD(BaseBroachingPlan.ToolHolderBase_DepthCompensation * 1000.0);
+			
+			// correzioni variante 1 
+			pDWord[3] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderA_AngleCompensation * 1000.0);
+			pDWord[4] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderA_LateralCompensation * 1000.0);
+			pDWord[5] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderA_DepthCompensation * 1000.0);			
+			
+			// correzioni variante 2 
+			pDWord[6] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderB_AngleCompensation * 1000.0);
+			pDWord[7] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderB_LateralCompensation * 1000.0);
+			pDWord[8] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderB_DepthCompensation * 1000.0);			
+			
+			// correzioni variante 3 
+			pDWord[9] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderC_AngleCompensation * 1000.0);
+			pDWord[10] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderC_LateralCompensation * 1000.0);
+			pDWord[11] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderC_DepthCompensation * 1000.0);			
+			
+			// correzioni variante 4 
+			pDWord[12] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderD_AngleCompensation * 1000.0);
+			pDWord[13] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderD_LateralCompensation * 1000.0);
+			pDWord[14] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderD_DepthCompensation * 1000.0);			
+			
+			// correzioni variante 5 
+			pDWord[15] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderE_AngleCompensation * 1000.0);
+			pDWord[16] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderE_LateralCompensation * 1000.0);
+			pDWord[17] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderE_DepthCompensation * 1000.0);			
+			
+			// correzioni variante 6 
+			pDWord[18] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderF_AngleCompensation * 1000.0);
+			pDWord[19] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderF_LateralCompensation * 1000.0);
+			pDWord[20] := REAL_TO_DWORD(VariantsBroachingPlan.ToolHolderF_DepthCompensation * 1000.0);
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_BroachingPlanCopyConpensation">
+      <LineId Id="303" Count="34" />
+      <LineId Id="151" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

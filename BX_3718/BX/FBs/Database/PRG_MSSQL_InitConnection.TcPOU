@@ -1,0 +1,1823 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="PRG_MSSQL_InitConnection" Id="{b0621dbe-b0a9-4d92-8c11-8d9e63d8398d}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_MSSQL_InitConnection
+VAR_INPUT
+	Enable			: BOOL;
+	DBID			: UDINT;
+	tRetryConn		: TIME;
+	pSQLCommand1	: POINTER TO FB_SQLCommandEvt;
+	pSQLCommand2	: POINTER TO FB_SQLCommandEvt;	
+	pSQLCommand3	: POINTER TO FB_SQLCommandEvt;
+	pSQLCommand4	: POINTER TO FB_SQLCommandEvt;
+	pSQLStoredProcedureEvt	: ARRAY[0..DB.MAX_NUMBER_ST] OF POINTER TO FB_SQLStoredProcedureEvt;
+END_VAR
+VAR_OUTPUT
+	Error			: BOOL;
+	ErrorID			: UINT;
+	Connected		: BOOL;
+END_VAR
+VAR
+	TON_DelayStartConnection : TON;
+	fbSQLDatabaseEvt	: FB_SQLDatabaseEvt(sNetID := '', tTimeout := T#5S);
+	fbSqlResult 		: FB_SQLResultEvt(sNetID:='', tTimeout := T#5S);
+	iState				: INT := -1;
+	RTRIG_Enable		: R_TRIG;
+	FTRIG_Enable		: F_TRIG;
+	TON_RetryConnection : TON;
+	SQLSPParameterSize1		: ARRAY[0..0] OF ST_SQLSPParameter;
+	SQLSPParameterSize2		: ARRAY[0..1] OF ST_SQLSPParameter;
+	SQLSPParameterSize3		: ARRAY[0..2] OF ST_SQLSPParameter;
+	SQLSPParameterSize4		: ARRAY[0..3] OF ST_SQLSPParameter;
+	SQLSPParameterSize5		: ARRAY[0..4] OF ST_SQLSPParameter;
+	SQLSPParameterSize6		: ARRAY[0..5] OF ST_SQLSPParameter;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Enable(CLK := Enable);
+FTRIG_Enable(CLK := Enable);
+
+TON_RetryConnection(IN := iState = 5,PT := tRetryConn);
+IF(RTRIG_Enable.Q) THEN
+	IF iState = 999 THEN
+		iState							:= 2;			// -> Connect	
+	ELSE
+		iState							:= 0;			// -> Connect	
+	END_IF
+
+	
+	ErrorID						:= 0;
+ELSIF(FTRIG_Enable.Q) THEN	
+	
+	ErrorID						:= 0;
+	iState							:= 990;			// -> Disconnect			
+END_IF
+
+
+TON_DelayStartConnection(IN := iState = 0, PT := T#1m);
+CASE iState OF
+	-1:
+		Connected := FALSE;
+		
+	0:
+		IF TON_DelayStartConnection.Q THEN
+			
+			iState								:= 2;
+		END_IF
+		
+	 2:
+// Connection 
+		Connected := FALSE;
+		fbSQLDatabaseEvt.Connect(DBID);
+		IF(fbSQLDatabaseEvt.bConnected) THEN
+			
+			iState								:= 10;
+		ELSIF(fbSQLDatabaseEvt.bError) THEN
+			Error 						:= TRUE;
+			ErrorID						:= 1001;
+			
+			iState								:= 5;
+		END_IF
+		
+	5:	
+// Wait time before retry
+		IF(TON_RetryConnection.Q) THEN
+			ErrorID						:= 0;
+			
+			iState								:= 2;
+		END_IF
+		
+	10:
+		IF(fbSQLDatabaseEvt.CreateCmd(pSQLCommand1)) THEN
+			IF(fbSQLDatabaseEvt.bError) THEN
+				
+				iState							:= 1010;
+			ELSE
+								
+
+				iState							:= 20;
+			END_IF
+		END_IF
+
+	20:	
+		IF(fbSQLDatabaseEvt.CreateCmd(pSQLCommand2)) THEN
+			IF(fbSQLDatabaseEvt.bError) THEN
+				
+				iState							:= 1020;
+			ELSE
+								
+				iState							:= 30;
+			END_IF
+		END_IF
+		
+	30:	
+		IF(fbSQLDatabaseEvt.CreateCmd(pSQLCommand3)) THEN
+			IF(fbSQLDatabaseEvt.bError) THEN
+				
+				iState							:= 1030;
+			ELSE
+								
+				iState							:= 40;
+			END_IF
+		END_IF
+		
+	40:	
+		IF(fbSQLDatabaseEvt.CreateCmd(pSQLCommand4)) THEN
+			IF(fbSQLDatabaseEvt.bError) THEN
+				
+				iState							:= 1040;
+			ELSE
+		
+				iState							:= 50;
+			END_IF
+		END_IF
+		
+	50:
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetNextPartDataSet]', 0, 0, pSQLStoredProcedureEvt[0]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:=1050;
+			ELSE
+				
+				iState							:= 60;
+			END_IF
+		END_IF
+
+// Get PLC Data		
+	60:
+		SQLSPParameterSize1[0].sParameterName     := '@Id';
+		SQLSPParameterSize1[0].eParameterType     := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.BigInt;
+		SQLSPParameterSize1[0].nParameterSize     := 8;
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetPartPLCDataById]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[1]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:=1060;
+			ELSE
+				
+				iState							:= 70;
+			END_IF
+		END_IF
+
+// Get HMI Data
+	70:
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetPartHMIDataById]', 0, 0, pSQLStoredProcedureEvt[2]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:=1070;
+			ELSE
+				
+				iState							:= 80;
+			END_IF
+		END_IF		
+		
+// Get Order List
+	80:
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetOrderInfoList]', 0, 0, pSQLStoredProcedureEvt[3]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:=1080;
+			ELSE
+				
+				iState							:= 90;
+			END_IF
+		END_IF
+
+// Append order
+	90:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+	
+		SQLSPParameterSize3[1].sParameterName := '@BatchInfoJson';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		                  
+		SQLSPParameterSize3[2].sParameterName := '@BatchItemsJson';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[AppendBatchToProductionQueueFromHMI]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[4]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1090;
+			ELSE
+				
+				iState							:= 100;
+			END_IF
+		END_IF
+
+// Modify quantity of an order	
+	100:
+		SQLSPParameterSize4[0].sParameterName := '@return';
+		SQLSPParameterSize4[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize4[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize4[0].nParameterSize := SIZEOF(DINT);
+	                      
+		SQLSPParameterSize4[1].sParameterName := '@BatchId';
+		SQLSPParameterSize4[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize4[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize4[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		                  
+		SQLSPParameterSize4[2].sParameterName := '@BatchInfoJson';
+		SQLSPParameterSize4[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize4[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize4[2].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		SQLSPParameterSize4[3].sParameterName := '@BatchItemsJson';
+		SQLSPParameterSize4[3].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize4[3].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize4[3].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[UpdateBatchToProductionQueue]', ADR(SQLSPParameterSize4), SIZEOF(SQLSPParameterSize4), pSQLStoredProcedureEvt[5]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1100;
+			ELSE
+				
+				iState							:= 110;
+			END_IF
+		END_IF
+
+// Delete an order
+	110:
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+	                      
+		SQLSPParameterSize2[1].sParameterName := '@BatchId';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[DeleteBatchToProductionQueue]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[6]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1110;
+			ELSE
+				
+				iState							:= 120;
+			END_IF
+		END_IF
+
+	120: 
+		// Batch Name X
+		SQLSPParameterSize2[0].sParameterName := '@BatchNameToMove';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(STRING(50));
+		
+		// Batch Name Y
+		SQLSPParameterSize2[1].sParameterName := '@NewPos';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.BigInt;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(LINT);
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[ChangePositionBatchInProductionQueue]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[7]) THEN
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:= 1120;
+			ELSE
+				
+				iState							:= 130;
+			END_IF
+		END_IF
+
+	130:
+		SQLSPParameterSize2[0].sParameterName     := '@return';
+		SQLSPParameterSize2[0].eParameterType     := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize     := SIZEOF(DINT);
+		                   
+		SQLSPParameterSize2[1].sParameterName     := '@PLCData';
+		SQLSPParameterSize2[1].eParameterType     := E_SPParameterType.Output;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize     := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetNextPartPLCData]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[8]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:=1130;
+			ELSE
+				
+				iState							:= 140;
+			END_IF
+		END_IF		
+		
+	140:
+		SQLSPParameterSize2[0].sParameterName     := '@return';
+		SQLSPParameterSize2[0].eParameterType     := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize     := SIZEOF(DINT);
+		
+		SQLSPParameterSize2[1].sParameterName     := '@PartLocationsAndProcessingDataJson';
+		SQLSPParameterSize2[1].eParameterType     := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize     := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[UpdatePartLocationsAndProcessingData]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[9]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:=1140;
+			ELSE
+				
+				iState							:= 150;
+			END_IF
+		END_IF	
+		
+	150:
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+		
+		SQLSPParameterSize2[1].sParameterName := '@ProcessingData';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetProcessingDataForHMI]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[10]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:=1150;
+			ELSE
+				
+				iState							:= 160;
+			END_IF
+		END_IF	
+		
+	160:
+		SQLSPParameterSize1[0].sParameterName := '@ProductName';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetResourceOrigin]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[11]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:=1160;
+			ELSE
+				
+				iState							:= 170;
+			END_IF
+		END_IF	
+		
+	170:
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+		
+		SQLSPParameterSize2[1].sParameterName := '@jsonAxis';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[ModifyOriginAxisInfoToResourceRepository]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[12]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+	
+				iState							:=1170;
+			ELSE
+				
+				iState							:= 180;
+			END_IF
+		END_IF	
+		
+	180:
+		// Return
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+		
+		// BatchName
+		SQLSPParameterSize3[1].sParameterName := '@BatchName';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(50));
+		
+		// NewBatchName
+		SQLSPParameterSize3[2].sParameterName := '@NewBatchName';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[DuplicateBatchInProductionQueue]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[13]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1180;
+			ELSE
+				
+				iState							:= 190;
+			END_IF
+		END_IF	
+		
+	190:
+		// Return
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+		
+		// ResourceType
+		SQLSPParameterSize2[1].sParameterName := '@ResourceType';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetResourcesByType]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[14]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1190;
+			ELSE
+				
+				iState							:= 200;
+			END_IF
+		END_IF	
+		
+	200:
+		// Return
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+		
+		// ResourceName
+		SQLSPParameterSize2[1].sParameterName := '@ResourceName';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetResourcesByName]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[15]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1200;
+			ELSE
+				
+				iState							:= 210;
+			END_IF
+		END_IF	
+		
+	210:
+		// Return
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+		
+		// ResourceName
+		SQLSPParameterSize3[1].sParameterName := '@ResourceName';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(50));
+		
+		// ResourceName
+		SQLSPParameterSize3[2].sParameterName := '@NewData';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[SetResourcesByName]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[16]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1210;
+			ELSE
+				
+				iState							:= 220;
+			END_IF
+		END_IF	
+		
+	220:
+		// Return
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+		
+		// ResourceType
+		SQLSPParameterSize2[1].sParameterName := '@ResourceType';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetResourcesListByType]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[17]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1220;
+			ELSE
+				
+				iState							:= 230;
+			END_IF
+		END_IF	
+		
+	230:
+		// Return
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+		
+		// ResourceType
+		SQLSPParameterSize2[1].sParameterName := '@SequenceName';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetFormattedTablesFromSequences]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[18]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1230;
+			ELSE
+				
+				iState							:= 240;
+			END_IF
+		END_IF	
+		
+	240:
+		// Return
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+		
+		// ResourceType
+		SQLSPParameterSize2[1].sParameterName := '@SequenceName';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetOriginsFromSequence]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[19]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1240;
+			ELSE
+				
+				iState							:= 250;
+			END_IF
+		END_IF	
+		
+	250:
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetOrigins]', 0, 0, pSQLStoredProcedureEvt[20]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1250;
+			ELSE
+				
+				iState							:= 260;
+			END_IF
+		END_IF	
+
+	260:
+		SQLSPParameterSize1[0].sParameterName := '@Name';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetOriginsByName]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[21]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1260;
+			ELSE
+				
+				iState							:= 270;
+			END_IF
+		END_IF
+		
+	270:
+		SQLSPParameterSize1[0].sParameterName := '@Size';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetOriginsBySide]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[22]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1270;
+			ELSE
+				
+				iState							:= 280;
+			END_IF
+		END_IF
+		
+	280:
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetCutters]', 0, 0, pSQLStoredProcedureEvt[23]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1280;
+			ELSE
+				
+				iState							:= 290;
+			END_IF
+		END_IF	
+
+	290:
+		SQLSPParameterSize1[0].sParameterName := '@Name';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetCuttersByName]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[24]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1290;
+			ELSE
+				
+				iState							:= 300;
+			END_IF
+		END_IF
+		
+	300:
+		SQLSPParameterSize1[0].sParameterName := '@Size';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetCuttersBySide]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[25]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1300;
+			ELSE
+				
+				iState							:= 310;
+			END_IF
+		END_IF
+		
+	310:
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetMillings]', 0, 0, pSQLStoredProcedureEvt[26]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1310;
+			ELSE
+				
+				iState							:= 320;
+			END_IF
+		END_IF	
+
+	320:
+		SQLSPParameterSize1[0].sParameterName := '@Name';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetMillingsByName]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[27]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1320;
+			ELSE
+				
+				iState							:= 330;
+			END_IF
+		END_IF
+		
+	330:
+		SQLSPParameterSize1[0].sParameterName := '@FamilyName';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetMillingsByFamilyName]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[28]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1330;
+			ELSE
+				
+				iState							:= 340;
+			END_IF
+		END_IF
+		
+	340:
+		SQLSPParameterSize1[0].sParameterName := '@GetResourcesByNameMilling';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetResourcesByNameMilling]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[29]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1340;
+			ELSE
+				
+				iState							:= 350;
+			END_IF
+		END_IF
+		
+	350:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+	
+		SQLSPParameterSize3[1].sParameterName := '@StatusFilter';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(50));
+		                  
+		SQLSPParameterSize3[2].sParameterName := '@OrderListJson';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[MES_GetOrderInfoList]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[31]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1350;
+			ELSE
+				
+				iState							:= 360;
+			END_IF
+		END_IF	
+		
+	360:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+	
+		SQLSPParameterSize3[1].sParameterName := '@OrderReference';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(50));
+		                  
+		SQLSPParameterSize3[2].sParameterName := '@OrderItemsJson';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[MES_GetOrderItems]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[32]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1360;
+			ELSE
+				
+				iState							:= 370;
+			END_IF
+		END_IF	
+		
+	370:
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+	                      
+		SQLSPParameterSize2[1].sParameterName := '@BatchId';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetOrderItems]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[33]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1370;
+			ELSE
+				
+				iState							:= 380;
+			END_IF
+		END_IF	
+		
+	380:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+	                      
+		SQLSPParameterSize3[1].sParameterName := '@InputJson';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		SQLSPParameterSize3[2].sParameterName := '@OutputJson';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetBatchList]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[34]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1380;
+			ELSE
+				
+				iState							:= 390;
+			END_IF
+		END_IF
+		
+	390:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+	                      
+		SQLSPParameterSize3[1].sParameterName := '@InputJson';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		SQLSPParameterSize3[2].sParameterName := '@OutputJson';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetBatchList]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[35]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1390;
+			ELSE
+				
+				iState							:= 400;
+			END_IF
+		END_IF
+		
+	400:
+		SQLSPParameterSize1[0].sParameterName := '@return';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[CMD_AbortProduction]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[36]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1400;
+			ELSE
+				
+				iState							:= 410;
+			END_IF
+		END_IF
+		
+	410:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+		                  
+		SQLSPParameterSize3[1].sParameterName := '@currentPage';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(DINT);
+		                  
+		SQLSPParameterSize3[2].sParameterName := '@recordToFetch';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(DINT);
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetBatchHistory]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[37]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1410;
+			ELSE
+				
+				iState							:= 420;
+			END_IF
+		END_IF
+
+	420:
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+
+		SQLSPParameterSize2[1].sParameterName := '@BatchId';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetBatchHistoryDetail]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[38]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1420;
+			ELSE
+				
+				iState							:= 430;
+			END_IF
+		END_IF
+		
+	430:
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+
+		SQLSPParameterSize2[1].sParameterName := '@Id';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[CMD_ForceCompletedBatch]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[39]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1430;
+			ELSE
+				
+				iState							:= 440;
+			END_IF
+		END_IF
+		
+	440:
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+
+		SQLSPParameterSize2[1].sParameterName := '@Id';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[CMD_HoldBatch]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[40]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1440;
+			ELSE
+				
+				iState							:= 450;
+			END_IF
+		END_IF
+		
+	450:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+                          
+		SQLSPParameterSize3[1].sParameterName := '@Id';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(50));
+		
+		SQLSPParameterSize3[2].sParameterName := '@Mode';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[CMD_RecoverBatch]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[41]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1450;
+			ELSE
+				
+				iState							:= 460;
+			END_IF
+		END_IF
+		
+	460:
+		SQLSPParameterSize4[0].sParameterName := '@return';
+		SQLSPParameterSize4[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize4[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize4[0].nParameterSize := SIZEOF(DINT);
+                          
+		SQLSPParameterSize4[1].sParameterName := '@Id';
+		SQLSPParameterSize4[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize4[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize4[1].nParameterSize := SIZEOF(STRING(50));
+		                  
+		SQLSPParameterSize4[2].sParameterName := '@Mode';
+		SQLSPParameterSize4[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize4[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize4[2].nParameterSize := SIZEOF(STRING(50));
+		                  
+		SQLSPParameterSize4[3].sParameterName := '@RestartMode';
+		SQLSPParameterSize4[3].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize4[3].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize4[3].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[CMD_RestartBatch]', ADR(SQLSPParameterSize4), SIZEOF(SQLSPParameterSize4), pSQLStoredProcedureEvt[42]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1460;
+			ELSE
+				
+				iState							:= 470;
+			END_IF
+		END_IF
+		
+	470:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+                          
+		SQLSPParameterSize3[1].sParameterName := '@Id';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(50));
+		
+		SQLSPParameterSize3[2].sParameterName := '@Mode';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[CMD_ResumeBatch]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[43]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1470;
+			ELSE
+				
+				iState							:= 480;
+			END_IF
+		END_IF
+		
+	480:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+                          
+		SQLSPParameterSize3[1].sParameterName := '@Id';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(50));
+		
+		SQLSPParameterSize3[2].sParameterName := '@Mode';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[CMD_SuspendBatch]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[44]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1480;
+			ELSE
+				
+				iState							:= 490;
+			END_IF
+		END_IF
+		
+	490:
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+
+		SQLSPParameterSize2[1].sParameterName := '@Id';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[CMD_UnholdBatch]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[45]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1490;
+			ELSE
+				
+				iState							:= 500;
+			END_IF
+		END_IF
+
+	500:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+
+		SQLSPParameterSize3[1].sParameterName := '@Name';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(50));
+		
+		SQLSPParameterSize3[2].sParameterName := '@JsonValue';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[UpdateSettingRepositoryByName]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[46]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1500;
+			ELSE
+				
+				iState							:= 510;
+			END_IF
+		END_IF		
+	
+	510:
+		SQLSPParameterSize1[0].sParameterName := '@return';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetSettingRepositoryList]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[47]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1510;
+			ELSE
+				
+				iState							:= 520;
+			END_IF
+		END_IF	
+		
+	520:
+		SQLSPParameterSize2[0].sParameterName := '@return';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);
+
+		SQLSPParameterSize2[1].sParameterName := '@BatchId';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(50));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetBatchDetailById]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[48]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1520;
+			ELSE
+				
+				iState							:=530;
+			END_IF
+		END_IF
+		
+	530:
+		SQLSPParameterSize3[0].sParameterName := '@return';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+
+		SQLSPParameterSize3[1].sParameterName := '@BatchId';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(50));
+		
+		SQLSPParameterSize3[2].sParameterName := '@DestinationPosition';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(DINT);
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[ChangeBatchPositionInProductionQueue]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[49]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1530;
+			ELSE
+				
+				iState							:= 540;
+			END_IF
+		END_IF
+		
+	540:
+		SQLSPParameterSize2[0].sParameterName := '@Drum';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(STRING(30));	
+	                      
+		SQLSPParameterSize2[1].sParameterName := '@JsonResult';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetCuttersOnDrum]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[50]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1540;
+			ELSE
+				
+				iState							:= 550;
+			END_IF
+		END_IF
+		
+	550:
+		SQLSPParameterSize1[0].sParameterName := '@JsonResult';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetCuttersComboboxFormatted]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[51]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1550;
+			ELSE
+				
+				iState							:= 560;
+			END_IF
+		END_IF
+		
+	560:
+		SQLSPParameterSize2[0].sParameterName := '@Drum';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(STRING(30));	
+	                      
+		SQLSPParameterSize2[1].sParameterName := '@JsonValue';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[UpdateCuttersOnDrum]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[52]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1560;
+			ELSE
+				
+				iState							:= 570;
+			END_IF
+		END_IF
+		
+	570:
+		SQLSPParameterSize3[0].sParameterName := '@Id';
+		SQLSPParameterSize3[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[0].nParameterSize := SIZEOF(DINT);
+		
+		SQLSPParameterSize3[1].sParameterName := '@Drum';
+		SQLSPParameterSize3[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize3[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize3[1].nParameterSize := SIZEOF(STRING(30));
+                          
+		SQLSPParameterSize3[2].sParameterName := '@BatchId';
+		SQLSPParameterSize3[2].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize3[2].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize3[2].nParameterSize := SIZEOF(DINT);
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[CheckCutterAlreadyPresentOnDrums]', ADR(SQLSPParameterSize3), SIZEOF(SQLSPParameterSize3), pSQLStoredProcedureEvt[53]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1570;
+			ELSE
+				
+				iState							:= 580;
+			END_IF
+		END_IF
+
+	580:
+		SQLSPParameterSize2[0].sParameterName := '@Id';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);	
+	                      
+		SQLSPParameterSize2[1].sParameterName := '@Data';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[UpdateCutterData]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[54]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1580;
+			ELSE
+				
+				iState							:= 590;
+			END_IF
+		END_IF
+
+	590:
+		SQLSPParameterSize1[0].sParameterName := '@FamilyName';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(30));	
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetProfilesByFamilyName]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[55]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1590;
+			ELSE
+				
+				iState							:= 600;
+			END_IF
+		END_IF		
+
+	600:
+		SQLSPParameterSize1[0].sParameterName := '@JsonResultError';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));	
+
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetProfiles]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[56]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1600;
+			ELSE
+				
+				iState							:= 610;
+			END_IF
+		END_IF	
+		
+	610:
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetFamilyNamesForCombobox]', 0, 0, pSQLStoredProcedureEvt[57]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1610;
+			ELSE
+				
+				iState							:= 620;
+			END_IF
+		END_IF			
+	
+	620:
+		SQLSPParameterSize2[0].sParameterName := '@FamilyName';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(STRING(30));	
+	                      
+		SQLSPParameterSize2[1].sParameterName := '@JsonResult';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetCuttersFromFamilyName]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[58]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1620;
+			ELSE
+				
+				iState							:= 630;
+			END_IF
+		END_IF	
+		
+	630:
+		SQLSPParameterSize1[0].sParameterName := '@ProfileId';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(50));	
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[DeleteProfile]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[59]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1630;
+			ELSE
+				
+				iState							:= 640;
+			END_IF
+		END_IF	
+		
+	640:
+		SQLSPParameterSize1[0].sParameterName := '@ProfileData';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));	
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[AddProfile]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[60]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1640;
+			ELSE
+				
+				iState							:= 650;
+			END_IF
+		END_IF	
+		
+	650:
+		SQLSPParameterSize1[0].sParameterName := '@CutterId';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(50));	
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[DeleteCutter]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[61]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1650;
+			ELSE
+				
+				iState							:= 660;
+			END_IF
+		END_IF
+		
+	660:
+		SQLSPParameterSize1[0].sParameterName := '@CutterData';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));	
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[AddCutter]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[62]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1660;
+			ELSE
+				
+				iState							:= 670;
+			END_IF
+		END_IF
+		
+	670:
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetBroachingProfileSettings]', 0, 0, pSQLStoredProcedureEvt[63]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1670;
+			ELSE
+				
+				iState							:= 680;
+			END_IF
+		END_IF
+		
+	680:
+		SQLSPParameterSize2[0].sParameterName := '@IdBroachingProfileSettings';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(DINT);	
+	                      
+		SQLSPParameterSize2[1].sParameterName := '@DataBroachingProfile';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[UpdateBroachingProfileSettings]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[64]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1680;
+			ELSE
+				
+				iState							:= 690;
+			END_IF
+		END_IF
+		
+	690:
+		SQLSPParameterSize6[0].sParameterName := '@return';
+		SQLSPParameterSize6[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize6[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize6[0].nParameterSize := SIZEOF(DINT);
+	                      
+		SQLSPParameterSize6[1].sParameterName := '@EventId';
+		SQLSPParameterSize6[1].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize6[1].eParameterDataType := E_ColumnType.BigInt;
+		SQLSPParameterSize6[1].nParameterSize := SIZEOF(LINT);
+		                  
+		SQLSPParameterSize6[2].sParameterName := '@EventTimeStamp';
+		SQLSPParameterSize6[2].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize6[2].eParameterDataType := E_ColumnType.DateTime;
+		SQLSPParameterSize6[2].nParameterSize := SIZEOF(DT);
+		                  
+		SQLSPParameterSize6[3].sParameterName := '@EventType';
+		SQLSPParameterSize6[3].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize6[3].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize6[3].nParameterSize := SIZEOF(DINT);
+		
+		SQLSPParameterSize6[4].sParameterName := '@Mode';
+		SQLSPParameterSize6[4].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize6[4].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize6[4].nParameterSize := SIZEOF(DINT);
+		
+		SQLSPParameterSize6[5].sParameterName := '@State';
+		SQLSPParameterSize6[5].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize6[5].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize6[5].nParameterSize := SIZEOF(DINT);
+	
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[LogModeStateEvent]', ADR(SQLSPParameterSize6), SIZEOF(SQLSPParameterSize6), pSQLStoredProcedureEvt[65]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1690;
+			ELSE
+				
+				iState							:= 700;
+			END_IF
+		END_IF
+		
+	700:                        
+		SQLSPParameterSize2[0].sParameterName := '@Name';
+		SQLSPParameterSize2[0].eParameterType := E_SPParameterType.Input;
+		SQLSPParameterSize2[0].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[0].nParameterSize := SIZEOF(STRING(50));
+		                  
+		SQLSPParameterSize2[1].sParameterName := '@Data';
+		SQLSPParameterSize2[1].eParameterType := E_SPParameterType.Output;
+		SQLSPParameterSize2[1].eParameterDataType := E_ColumnType.NVarChar;
+		SQLSPParameterSize2[1].nParameterSize := SIZEOF(STRING(DB.MAX_STRING_SIZE));
+		
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[GetSettingRepositoryByName]', ADR(SQLSPParameterSize2), SIZEOF(SQLSPParameterSize2), pSQLStoredProcedureEvt[66]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1700;
+			ELSE
+				
+				iState							:= 710;
+			END_IF
+		END_IF	
+		
+	710:
+		SQLSPParameterSize1[0].sParameterName := '@return';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[_TASK1]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[67]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1710;
+			ELSE
+				
+				iState							:= 720;
+			END_IF
+		END_IF	
+		
+	720:
+		SQLSPParameterSize1[0].sParameterName := '@return';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[_TASK2]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[68]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1720;
+			ELSE
+				
+				iState							:= 730;
+			END_IF
+		END_IF	
+		
+	730:
+		SQLSPParameterSize1[0].sParameterName := '@return';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[_TASK3]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[69]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1730;
+			ELSE
+				
+				iState							:= 740;
+			END_IF
+		END_IF	
+		
+	740:
+		SQLSPParameterSize1[0].sParameterName := '@return';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[_TASK4]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[70]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1740;
+			ELSE
+				
+				iState							:= 750;
+			END_IF
+		END_IF	
+		
+	750:
+		SQLSPParameterSize1[0].sParameterName := '@return';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[_TASK5]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt[71]) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1750;
+			ELSE
+				
+				iState							:= 980;
+			END_IF
+		END_IF	
+	
+	
+// Connected output state
+	980:
+		IF fbSQLDatabaseEvt.bConnected THEN
+			 Connected := TRUE;
+		END_IF
+
+// Disconnected output state		
+	990:
+		IF(fbSQLDatabaseEvt.Disconnect()) THEN
+			Connected := FALSE;
+			IF fbSQLDatabaseEvt.bError THEN
+				Error						:= TRUE;
+				ErrorID						:= 1003;
+			ELSE
+				
+				iState							:= 999;
+			END_IF
+		END_IF
+
+// Wait for disconnection		
+	999:
+		;
+END_CASE
+
+
+
+
+IF iState > 1000 THEN
+	Error := TRUE;
+ELSE
+	Error := FALSE;
+END_IF
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="PRG_MSSQL_InitConnection">
+      <LineId Id="5405" Count="4" />
+      <LineId Id="8147" Count="1" />
+      <LineId Id="8151" Count="1" />
+      <LineId Id="8149" Count="0" />
+      <LineId Id="5410" Count="13" />
+      <LineId Id="8055" Count="1" />
+      <LineId Id="8059" Count="0" />
+      <LineId Id="8062" Count="1" />
+      <LineId Id="8061" Count="0" />
+      <LineId Id="5424" Count="109" />
+      <LineId Id="6652" Count="11" />
+      <LineId Id="6752" Count="22" />
+      <LineId Id="6664" Count="3" />
+      <LineId Id="6775" Count="27" />
+      <LineId Id="5607" Count="3" />
+      <LineId Id="6803" Count="17" />
+      <LineId Id="5631" Count="71" />
+      <LineId Id="6293" Count="0" />
+      <LineId Id="6295" Count="2" />
+      <LineId Id="6294" Count="0" />
+      <LineId Id="5703" Count="218" />
+      <LineId Id="5986" Count="1" />
+      <LineId Id="5989" Count="7" />
+      <LineId Id="5988" Count="0" />
+      <LineId Id="5998" Count="1" />
+      <LineId Id="6009" Count="2" />
+      <LineId Id="6008" Count="0" />
+      <LineId Id="6012" Count="0" />
+      <LineId Id="6000" Count="7" />
+      <LineId Id="5997" Count="0" />
+      <LineId Id="6013" Count="0" />
+      <LineId Id="6015" Count="13" />
+      <LineId Id="6014" Count="0" />
+      <LineId Id="6029" Count="0" />
+      <LineId Id="6031" Count="40" />
+      <LineId Id="6030" Count="0" />
+      <LineId Id="6072" Count="0" />
+      <LineId Id="6074" Count="28" />
+      <LineId Id="6115" Count="1" />
+      <LineId Id="6105" Count="9" />
+      <LineId Id="6073" Count="0" />
+      <LineId Id="6146" Count="0" />
+      <LineId Id="6148" Count="13" />
+      <LineId Id="6147" Count="0" />
+      <LineId Id="6191" Count="1" />
+      <LineId Id="6235" Count="2" />
+      <LineId Id="6233" Count="1" />
+      <LineId Id="6215" Count="17" />
+      <LineId Id="6213" Count="0" />
+      <LineId Id="6238" Count="0" />
+      <LineId Id="6240" Count="23" />
+      <LineId Id="6239" Count="0" />
+      <LineId Id="6327" Count="10" />
+      <LineId Id="6343" Count="8" />
+      <LineId Id="5922" Count="0" />
+      <LineId Id="6430" Count="0" />
+      <LineId Id="6432" Count="10" />
+      <LineId Id="6452" Count="2" />
+      <LineId Id="6451" Count="0" />
+      <LineId Id="6455" Count="0" />
+      <LineId Id="6443" Count="7" />
+      <LineId Id="6431" Count="0" />
+      <LineId Id="6485" Count="0" />
+      <LineId Id="6487" Count="23" />
+      <LineId Id="6486" Count="0" />
+      <LineId Id="6850" Count="1" />
+      <LineId Id="6861" Count="2" />
+      <LineId Id="6852" Count="0" />
+      <LineId Id="6864" Count="0" />
+      <LineId Id="6853" Count="7" />
+      <LineId Id="6601" Count="0" />
+      <LineId Id="6894" Count="0" />
+      <LineId Id="6896" Count="4" />
+      <LineId Id="6910" Count="0" />
+      <LineId Id="6912" Count="2" />
+      <LineId Id="6911" Count="0" />
+      <LineId Id="6915" Count="0" />
+      <LineId Id="6917" Count="2" />
+      <LineId Id="6916" Count="0" />
+      <LineId Id="6901" Count="8" />
+      <LineId Id="6895" Count="0" />
+      <LineId Id="7121" Count="0" />
+      <LineId Id="7123" Count="18" />
+      <LineId Id="7122" Count="0" />
+      <LineId Id="6949" Count="0" />
+      <LineId Id="6951" Count="4" />
+      <LineId Id="6966" Count="3" />
+      <LineId Id="6965" Count="0" />
+      <LineId Id="6956" Count="8" />
+      <LineId Id="6950" Count="0" />
+      <LineId Id="6970" Count="0" />
+      <LineId Id="6972" Count="18" />
+      <LineId Id="6971" Count="0" />
+      <LineId Id="6991" Count="0" />
+      <LineId Id="6993" Count="9" />
+      <LineId Id="7012" Count="0" />
+      <LineId Id="7014" Count="2" />
+      <LineId Id="7013" Count="0" />
+      <LineId Id="7003" Count="8" />
+      <LineId Id="6992" Count="0" />
+      <LineId Id="7017" Count="0" />
+      <LineId Id="7019" Count="14" />
+      <LineId Id="7043" Count="0" />
+      <LineId Id="7045" Count="2" />
+      <LineId Id="7044" Count="0" />
+      <LineId Id="7034" Count="8" />
+      <LineId Id="7018" Count="0" />
+      <LineId Id="7048" Count="0" />
+      <LineId Id="7050" Count="23" />
+      <LineId Id="7049" Count="0" />
+      <LineId Id="7074" Count="0" />
+      <LineId Id="7076" Count="23" />
+      <LineId Id="7075" Count="0" />
+      <LineId Id="7100" Count="0" />
+      <LineId Id="7102" Count="18" />
+      <LineId Id="7101" Count="0" />
+      <LineId Id="7171" Count="0" />
+      <LineId Id="7175" Count="9" />
+      <LineId Id="7194" Count="0" />
+      <LineId Id="7196" Count="2" />
+      <LineId Id="7195" Count="0" />
+      <LineId Id="7185" Count="8" />
+      <LineId Id="5923" Count="0" />
+      <LineId Id="7172" Count="0" />
+      <LineId Id="7229" Count="4" />
+      <LineId Id="7244" Count="8" />
+      <LineId Id="7228" Count="0" />
+      <LineId Id="7283" Count="0" />
+      <LineId Id="7285" Count="44" />
+      <LineId Id="7284" Count="0" />
+      <LineId Id="7376" Count="0" />
+      <LineId Id="7378" Count="0" />
+      <LineId Id="7394" Count="2" />
+      <LineId Id="7457" Count="0" />
+      <LineId Id="7393" Count="0" />
+      <LineId Id="7379" Count="12" />
+      <LineId Id="7377" Count="0" />
+      <LineId Id="7397" Count="0" />
+      <LineId Id="7399" Count="13" />
+      <LineId Id="7398" Count="0" />
+      <LineId Id="7487" Count="1" />
+      <LineId Id="7490" Count="17" />
+      <LineId Id="7489" Count="0" />
+      <LineId Id="7537" Count="0" />
+      <LineId Id="7539" Count="4" />
+      <LineId Id="7563" Count="0" />
+      <LineId Id="7565" Count="2" />
+      <LineId Id="7564" Count="0" />
+      <LineId Id="7544" Count="4" />
+      <LineId Id="7554" Count="8" />
+      <LineId Id="7538" Count="0" />
+      <LineId Id="7597" Count="0" />
+      <LineId Id="7600" Count="18" />
+      <LineId Id="7598" Count="0" />
+      <LineId Id="7619" Count="0" />
+      <LineId Id="7621" Count="4" />
+      <LineId Id="7631" Count="8" />
+      <LineId Id="7599" Count="0" />
+      <LineId Id="7640" Count="1" />
+      <LineId Id="7853" Count="2" />
+      <LineId Id="7851" Count="1" />
+      <LineId Id="7658" Count="7" />
+      <LineId Id="7657" Count="0" />
+      <LineId Id="7695" Count="1" />
+      <LineId Id="7698" Count="7" />
+      <LineId Id="7697" Count="0" />
+      <LineId Id="7735" Count="0" />
+      <LineId Id="7754" Count="0" />
+      <LineId Id="7736" Count="17" />
+      <LineId Id="7253" Count="0" />
+      <LineId Id="7785" Count="0" />
+      <LineId Id="7787" Count="4" />
+      <LineId Id="7797" Count="8" />
+      <LineId Id="7786" Count="0" />
+      <LineId Id="7806" Count="0" />
+      <LineId Id="7808" Count="13" />
+      <LineId Id="7807" Count="0" />
+      <LineId Id="7857" Count="14" />
+      <LineId Id="7856" Count="0" />
+      <LineId Id="7873" Count="14" />
+      <LineId Id="7872" Count="0" />
+      <LineId Id="7918" Count="1" />
+      <LineId Id="7925" Count="7" />
+      <LineId Id="7917" Count="0" />
+      <LineId Id="7933" Count="0" />
+      <LineId Id="7935" Count="0" />
+      <LineId Id="7945" Count="7" />
+      <LineId Id="7944" Count="0" />
+      <LineId Id="7953" Count="0" />
+      <LineId Id="7936" Count="7" />
+      <LineId Id="7934" Count="0" />
+      <LineId Id="7983" Count="1" />
+      <LineId Id="7986" Count="18" />
+      <LineId Id="8015" Count="0" />
+      <LineId Id="8017" Count="2" />
+      <LineId Id="8016" Count="0" />
+      <LineId Id="8020" Count="0" />
+      <LineId Id="8022" Count="2" />
+      <LineId Id="8021" Count="0" />
+      <LineId Id="8005" Count="8" />
+      <LineId Id="7985" Count="0" />
+      <LineId Id="8095" Count="0" />
+      <LineId Id="8097" Count="18" />
+      <LineId Id="8096" Count="0" />
+      <LineId Id="8184" Count="1" />
+      <LineId Id="8188" Count="2" />
+      <LineId Id="8187" Count="0" />
+      <LineId Id="8192" Count="7" />
+      <LineId Id="8191" Count="0" />
+      <LineId Id="8200" Count="0" />
+      <LineId Id="8202" Count="12" />
+      <LineId Id="8201" Count="0" />
+      <LineId Id="8215" Count="0" />
+      <LineId Id="8217" Count="12" />
+      <LineId Id="8216" Count="0" />
+      <LineId Id="8230" Count="0" />
+      <LineId Id="8232" Count="12" />
+      <LineId Id="8231" Count="0" />
+      <LineId Id="8245" Count="0" />
+      <LineId Id="8247" Count="12" />
+      <LineId Id="8246" Count="0" />
+      <LineId Id="8186" Count="0" />
+      <LineId Id="7784" Count="0" />
+      <LineId Id="5924" Count="32" />
+      <LineId Id="1486" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

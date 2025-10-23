@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_Refresh" Id="{485568b0-aa46-42f2-88e0-5bce901c7861}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Refresh
+VAR_IN_OUT
+    bRefreshHMI : BOOL;          // → HMI
+END_VAR
+VAR
+    fbPeriod    : TON := (PT := T#1S);      // Timer periodo di 1 s
+    fbWatchdog  : TON := (PT := T#500MS);   // Watch‑dog di 500 ms
+    bWaitingForReset : BOOL;                // TRUE finché aspettiamo il reset
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* --- fase di attesa impulso --- *)
+IF NOT bWaitingForReset THEN
+    fbPeriod(IN := TRUE);                
+
+    IF fbPeriod.Q OR bRefreshHMI THEN                   
+        bRefreshHMI := TRUE;             // dico all’HMI “sono vivo”
+        fbPeriod(IN := FALSE);           // fermo il period
+        fbWatchdog(IN := TRUE);          // start WD (1ª chiamata)
+        bWaitingForReset := TRUE;
+    END_IF
+
+(* --- fase di attesa reset HMI o watchdog --- *)
+ELSE
+    fbPeriod(IN := FALSE);               // periodo fermo
+    fbWatchdog(IN := TRUE);
+
+    IF NOT bRefreshHMI THEN              // HMI ha resettato
+        fbWatchdog(IN := FALSE);         // stop WD
+        bWaitingForReset := FALSE;
+
+    ELSIF fbWatchdog.Q THEN              
+        bRefreshHMI := FALSE;            // forzo reset
+        fbWatchdog(IN := FALSE);         // riarmo
+        bWaitingForReset := FALSE;
+    END_IF
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_Refresh">
+      <LineId Id="196" Count="24" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

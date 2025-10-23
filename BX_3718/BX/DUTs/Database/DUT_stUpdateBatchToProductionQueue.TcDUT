@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_stUpdateBatchToProductionQueue" Id="{14b58b27-634e-4166-927d-9086aca60a02}">
+    <Declaration><![CDATA[TYPE DUT_stUpdateBatchToProductionQueue :
+STRUCT
+	return_			: DINT;
+	BatchId	: STRING(DB.MAX_STRING_SIZE);
+	BatchInfoJson	: STRING(DB.MAX_STRING_SIZE);
+	BatchItemsJson	: STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

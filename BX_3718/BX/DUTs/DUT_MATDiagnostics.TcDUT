@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_MATDiagnostics" Id="{3be378ce-996f-40a0-9a28-0a6e93bb9ccc}">
+    <Declaration><![CDATA[TYPE DUT_MATDiagnostics :
+STRUCT
+    Running : BOOL;
+    Heartbeat : BOOL;
+    Error : BOOL;
+    ErrorMessage : STRING(80);
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

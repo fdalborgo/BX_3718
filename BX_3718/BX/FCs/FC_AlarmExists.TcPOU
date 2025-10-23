@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_AlarmExists" Id="{bae820b5-4b79-43a8-bf88-2b7d104e2f4e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_AlarmExists : BOOL
+VAR_INPUT
+    SourceName: STRING(255) := '';
+	TcSourceInfo	: FB_TcSourceInfo;
+	TcEventLogger 	: FB_TcEventLogger;
+	TcAlarm	: REFERENCE TO FB_TcAlarm;
+	pTcEventEntry	: TcEventEntry;
+	EventId	: UDINT;
+END_VAR
+VAR
+	hr	: HRESULT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TcSourceInfo.sName := CONCAT('PLC.', SourceName);
+hr := TcEventLogger.GetAlarm(pTcEventEntry.uuidEventClass, EventId, TcSourceInfo, TcAlarm);
+
+// Create event if not already created
+IF NOT SUCCEEDED(hr) THEN		
+	hr := TcAlarm.CreateEx(pTcEventEntry, FALSE, TcSourceInfo);
+END_IF;	
+
+IF SUCCEEDED(hr) THEN		
+	FC_AlarmExists := TRUE;
+ELSE
+	FC_AlarmExists := FALSE;
+END_IF;	
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_AlarmExists">
+      <LineId Id="64" Count="5" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="84" Count="3" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="80" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

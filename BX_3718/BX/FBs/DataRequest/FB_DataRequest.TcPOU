@@ -1,0 +1,262 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_DataRequest" Id="{d8642ae1-9de7-422e-a6f7-a6d611d49864}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_DataRequest
+VAR_INPUT
+	Reset			: BOOL;
+	ExecuteCurrent  : BOOL;
+	ExecuteNext		: BOOL; 
+	WID				: DWORD;
+	MachineEmpty	: BOOL;
+END_VAR
+VAR_OUTPUT
+	Done			: BOOL;
+	Busy			: BOOL;
+	Error			: BOOL;
+	ErrorID			: DINT;
+	ErrorSubID		: DINT;
+	Elapsed			: TIME;
+	ErrorCodePMC	: BYTE;
+END_VAR
+VAR_IN_OUT
+	St0Data : DUT_St0Data;
+	fbShiftDataBuffer		: FB_DataBufferManager;
+	WID_Old			: DINT;
+	PMC_ShiftManData0 		: stShiftData;
+END_VAR
+VAR
+	i				: UDINT;
+	iState			: INT := -1;
+	RTRIG_ReqNext	: R_TRIG;
+	RTRIG_Reset	: R_TRIG;
+	RTRIG_Empty		: R_TRIG;
+	FTRIG_Empty		: F_TRIG;
+	TON_Elaspse		: TON;
+	Next			: BOOL;
+	TempDataBuffer 		: DataBuffer;
+	memEmpty		: BOOL;
+	tempstByteAsBit	: stByteAsBit;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT ExecuteCurrent AND NOT ExecuteNext AND iState = 1030 THEN
+	iState := -1;
+END_IF
+
+RTRIG_Reset(CLK:=Reset);
+IF RTRIG_Reset.Q AND Error THEN
+	Error := FALSE; // Error
+	ErrorID := 0;
+	ErrorSubID := 0;
+	iState := -1;
+END_IF
+
+RTRIG_ReqNext(CLK := ExecuteCurrent OR ExecuteNext); // Request
+TON_Elaspse(IN:= Busy, PT:=T#10S);
+IF TON_Elaspse.Q THEN
+	ErrorSubID := iState;
+	iState := 1999;
+END_IF
+IF RTRIG_ReqNext.Q AND NOT Busy THEN
+	Next := ExecuteNext;
+	Error := FALSE; // Error
+	ErrorID := 0;
+	ErrorSubID := 0;
+	iState := 0;
+END_IF
+
+RTRIG_Empty(CLK := MachineEmpty AND NOT Busy);
+IF RTRIG_Empty.Q THEN
+	memEmpty := TRUE;
+	IF Error THEN
+		Error := FALSE;
+		ErrorID := 0;
+		ErrorSubID := 0;
+	END_IF
+END_IF
+FTRIG_Empty(CLK := MachineEmpty);
+IF FTRIG_Empty.Q THEN
+	memEmpty := FALSE;
+END_IF
+IF memEmpty AND ErrorID = 1030 THEN
+	Error := FALSE; // Error
+	ErrorCodePMC := 0;
+END_IF
+
+CASE iState OF
+	-1:
+		Done := FALSE; // Done
+		Busy := FALSE; // Busy
+	
+	0:
+		Error := FALSE; // Error
+		MEMSET(ADR(St0Data), 0, SIZEOF(St0Data));
+		PMC_ShiftManData0.FLAGP.aBit.b0 := FALSE;
+		ErrorCodePMC := 0;
+		Busy := TRUE;
+		
+		IF WID<>0 THEN
+			IF WID_Old <> DWORD_TO_DINT(St0Data.WindP) OR WID_Old <> DWORD_TO_DINT(WID) THEN
+				iState := 10;
+			ELSE		
+				iState := 997;
+			END_IF	
+		ELSE		
+			iState := 10;
+		END_IF		
+		
+	10:
+		PRG_MSSQL_spGetNextPartPLCData.Execute := TRUE;
+		IF PRG_MSSQL_spGetNextPartPLCData.Busy THEN
+			
+			iState := 20;
+		END_IF
+		
+	20:
+		IF PRG_MSSQL_spGetNextPartPLCData.Done THEN
+			
+			iState := 30;
+		ELSIF PRG_MSSQL_spGetNextPartPLCData.Error THEN
+			PRG_MSSQL_spGetNextPartPLCData.Execute := FALSE;
+			
+			iState := 1020;
+		END_IF
+		
+	30:
+		IF PRG_MSSQL_spGetNextPartPLCData.DataGood THEN 
+			PRG_MSSQL_spGetNextPartPLCData.Execute := FALSE;
+	
+			tempstByteAsBit.aByte := 0;
+			tempstByteAsBit.aBit.b0 := SEL(STRING_TO_INT(DB.stPLCData.IsFirstPartInBatch) = 1, FALSE, TRUE);
+			tempstByteAsBit.aBit.b1 := SEL(STRING_TO_INT(DB.stPLCData.IsLastPartInBatch) = 1, FALSE, TRUE);
+			tempstByteAsBit.aBit.b2 := SEL(STRING_TO_INT(DB.stPLCData.IsFirstPartInRow) = 1, FALSE, TRUE);
+			tempstByteAsBit.aBit.b3 := SEL(STRING_TO_INT(DB.stPLCData.IsLastPartInRow) = 1, FALSE, TRUE);			
+			St0Data.FlagP[2] := tempstByteAsBit.aByte;
+			
+			St0Data.WindP := SEL(Next, WID, DINT_TO_DWORD(DB.stPLCData.PartId));
+			St0Data.TpcyS[3]  := DINT_TO_BYTE(DB.stPLCData.BroachingPlan.PassCount);		
+
+			// Giro 1
+			FC_BroachingPlanCopyPass(ADR(St0Data.TpcyS[5]), DB.stPLCData.BroachingPlan.Pass1BaseBroachingPlan, DB.stPLCData.BroachingPlan.Pass1VariantsBroachingPlan);		
+			// Giro 2
+			FC_BroachingPlanCopyPass(ADR(St0Data.TpcyS[12]), DB.stPLCData.BroachingPlan.Pass2BaseBroachingPlan, DB.stPLCData.BroachingPlan.Pass2VariantsBroachingPlan);			
+			// Giro 3
+			FC_BroachingPlanCopyPass(ADR(St0Data.TpcyS[19]), DB.stPLCData.BroachingPlan.Pass3BaseBroachingPlan, DB.stPLCData.BroachingPlan.Pass3VariantsBroachingPlan);		
+			// Giro 4  
+			FC_BroachingPlanCopyPass(ADR(St0Data.TpcyS[26]), DB.stPLCData.BroachingPlan.Pass4BaseBroachingPlan, DB.stPLCData.BroachingPlan.Pass4VariantsBroachingPlan);       	
+
+			// Tipo di sbavatura
+			tempstByteAsBit.aByte := 0;
+			tempstByteAsBit.aBit.b0 := SEL(DB.stPLCData.Brushing = '5Pins', FALSE, TRUE);
+			tempstByteAsBit.aBit.b1 := SEL(DB.stPLCData.Brushing = '6Pins', FALSE, TRUE);
+			St0Data.TpcyS[33] := tempstByteAsBit.aByte;
+			
+			// sbavatura foro coda si, no
+			IF DB.stPLCData.BackHole = '' THEN
+				// errore stringa abilitazione foro coda
+				St0Data.TpcyS[34] := 0;
+				iState := 1031;
+				RETURN;
+			ELSIF DB.stPLCData.BackHole = 'No' THEN
+				St0Data.TpcyS[34] := 0;
+			ELSIF DB.stPLCData.BackHole = 'Si' THEN
+				St0Data.TpcyS[34] := 1; 
+			ELSE
+				// errore stringa abilitazione foro coda
+				St0Data.TpcyS[34] := 0;
+				iState := 1032;
+				RETURN;
+			END_IF
+			
+			// tipo di scarico
+			St0Data.TpcyS[35] :=DINT_TO_BYTE(DB.stPLCData.UnloadingModeId);
+			
+			FC_BroachingPlanCopyConpensation(ADR(St0Data.Data[1]), DB.stPLCData.BroachingPlan.Pass1BaseBroachingPlan, DB.stPLCData.BroachingPlan.Pass1VariantsBroachingPlan);	
+			// Giro 1		
+			FC_BroachingPlanCopyConpensation(ADR(St0Data.Data[1]), DB.stPLCData.BroachingPlan.Pass1BaseBroachingPlan, DB.stPLCData.BroachingPlan.Pass1VariantsBroachingPlan);
+			// Giro 2
+			FC_BroachingPlanCopyConpensation(ADR(St0Data.Data[22]), DB.stPLCData.BroachingPlan.Pass2BaseBroachingPlan, DB.stPLCData.BroachingPlan.Pass2VariantsBroachingPlan);		
+			// Giro 3
+			FC_BroachingPlanCopyConpensation(ADR(St0Data.Data[43]), DB.stPLCData.BroachingPlan.Pass3BaseBroachingPlan, DB.stPLCData.BroachingPlan.Pass3VariantsBroachingPlan);		
+			// Giro 4
+			FC_BroachingPlanCopyConpensation(ADR(St0Data.Data[64]), DB.stPLCData.BroachingPlan.Pass4BaseBroachingPlan, DB.stPLCData.BroachingPlan.Pass4VariantsBroachingPlan);			
+			
+			iState := 997;
+		ELSIF PRG_MSSQL_spGetNextPartPLCData.Empty THEN
+			PRG_MSSQL_spGetNextPartPLCData.Execute := FALSE;
+			St0Data.WindP := 0;
+			PMC_ShiftManData0.WIDP := DWORD_TO_DINT(St0Data.WindP);
+			
+			iState := 1030;
+		END_IF
+		
+	997:
+		PMC_ShiftManData0.WIDP := DWORD_TO_DINT(St0Data.WindP);
+		TempDataBuffer.WIDP				:= DWORD_TO_DINT(St0Data.WindP);
+		TempDataBuffer.PmcData				:= St0Data;
+		TempDataBuffer.stPLCData			:= DB.stPLCData;
+		PMC_ShiftManData0.FLAGP.aBit.b0 := TRUE;	
+	
+		fbShiftDataBuffer.Ins(TempDataBuffer);
+		WID_Old := DWORD_TO_DINT(WID);
+		
+		Done := TRUE;
+		Busy := FALSE;
+		Elapsed := TON_Elaspse.ET;
+		
+		iState := 998;
+		
+	998:
+		fbShiftDataBuffer.Shift();
+		iState := 999;
+		
+	999:
+		IF NOT ExecuteCurrent AND NOT ExecuteNext THEN
+			iState := -1;
+		END_IF
+	
+END_CASE
+
+IF(iState > 999) THEN
+	Done			:= FALSE;
+	Busy			:= FALSE;
+	Error			:= TRUE;
+	ErrorID := iState;
+	ErrorCodePMC := SEL(ErrorID = 1030, SINT_TO_BYTE(-1), SINT_TO_BYTE(1));
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_DataRequest">
+      <LineId Id="2398" Count="7" />
+      <LineId Id="3003" Count="0" />
+      <LineId Id="2406" Count="5" />
+      <LineId Id="3001" Count="0" />
+      <LineId Id="2412" Count="5" />
+      <LineId Id="3004" Count="0" />
+      <LineId Id="2418" Count="5" />
+      <LineId Id="2798" Count="1" />
+      <LineId Id="2801" Count="0" />
+      <LineId Id="3005" Count="0" />
+      <LineId Id="2800" Count="0" />
+      <LineId Id="2424" Count="20" />
+      <LineId Id="2650" Count="0" />
+      <LineId Id="2446" Count="29" />
+      <LineId Id="2653" Count="0" />
+      <LineId Id="3046" Count="3" />
+      <LineId Id="3044" Count="0" />
+      <LineId Id="3042" Count="1" />
+      <LineId Id="2476" Count="1" />
+      <LineId Id="2889" Count="0" />
+      <LineId Id="2485" Count="10" />
+      <LineId Id="2497" Count="22" />
+      <LineId Id="2841" Count="0" />
+      <LineId Id="2812" Count="0" />
+      <LineId Id="2521" Count="23" />
+      <LineId Id="2549" Count="0" />
+      <LineId Id="2551" Count="9" />
+      <LineId Id="2578" Count="0" />
+      <LineId Id="2614" Count="0" />
+      <LineId Id="2564" Count="13" />
+      <LineId Id="344" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

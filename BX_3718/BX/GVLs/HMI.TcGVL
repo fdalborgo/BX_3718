@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <GVL Name="HMI" Id="{77f980f5-b11f-406f-8729-f8163cb03b6b}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+	NUM_NAVIGATION_ITEMS : UINT := 22;
+END_VAR
+
+VAR_GLOBAL PERSISTENT RETAIN
+// Shifting Data from CNC
+	ShiftData 	: ARRAY[0..20] OF stShiftData;
+	Production		: DUT_Production;
+	
+	ContadinoBool	: BOOL;
+	ContadinoString	: STRING;
+	ProductsLoaded	: ARRAY[0..1] OF STRING;
+	ProcessingData	: ARRAY[0..CNC.NUM_DATA_POSITION] OF DUT_HIM_ProscessingData;
+	SelectedLoadingMode : eLoadingMode;
+	ChipConveyorSetpoint	: UINT;
+	DropsaSetpoint	: UINT;
+	RobotLoadSetpoint : DUT_RobSetpoint_Real;
+	RobotUnloadSetpoint : DUT_RobSetpoint_Real;
+END_VAR
+
+VAR_GLOBAL
+	General		: DUT_HMI_General; 
+	St0			: DUT_HMI_00;
+	St1			: DUT_HMI_01;
+	St2			: DUT_HMI_02;
+	St3			: DUT_HMI_03;
+	St4			: DUT_HMI_04;
+	St5			: DUT_HMI_05;
+	St6			: DUT_HMI_06;
+	St7			: DUT_HMI_07;
+	St8			: DUT_HMI_08;
+	St9			: DUT_HMI_09;
+	St10		: DUT_HMI_10;
+	St11		: DUT_HMI_11;
+	St12		: DUT_HMI_12;
+	St13		: DUT_HMI_13;
+	St14		: DUT_HMI_13;
+	
+//Shift Data
+	ShiftTrigger : BOOL;
+	ShiftnDone	 : BOOL;
+	ShiftError	 : BOOL;	
+	
+// HMI Exchange	
+	In  : DUT_HMI_In;
+	Out : DUT_HMI_Out;
+		
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

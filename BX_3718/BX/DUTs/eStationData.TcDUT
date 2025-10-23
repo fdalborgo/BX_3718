@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="eStationData" Id="{efd54c59-cbca-461a-ba71-3ba0600940a8}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE eStationData :
+(
+	aSt1	:= 0,
+	aSt2	:= 1,
+	aSt3	:= 2,
+	aSt4	:= 3,
+	aSt5	:= 4,
+	aSt6	:= 5,
+	aSt7	:= 6,
+	aSt8	:= 7,
+	aSt9	:= 8,
+	aSt10	:= 9,
+	aSt11	:= 10,
+	aSt12	:= 11,
+	aSt13	:= 12,
+	aSt14	:= 13,
+	aSt15	:= 14,
+	aSt16	:= 15,
+	aSt2b	:= 16,
+	aSt2c	:= 17,
+	aSt2d	:= 18
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

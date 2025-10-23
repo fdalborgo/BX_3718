@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="Print" Id="{473d3374-b0d2-412b-9cfb-ef12c63c32d5}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION Print : BOOL
+VAR_INPUT
+	Text : T_MaxString;
+	Arg	: T_MaxString;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ADSLOGSTR(ADSLOG_MSGTYPE_LOG, CONCAT(Text, '%s'), Arg);]]></ST>
+    </Implementation>
+    <LineIds Name="Print">
+      <LineId Id="109" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

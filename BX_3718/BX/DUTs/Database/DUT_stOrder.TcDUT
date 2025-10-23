@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_stOrder" Id="{f9a15425-47c6-4ef0-ab88-5a3195278930}">
+    <Declaration><![CDATA[TYPE DUT_stOrder :
+STRUCT
+	Position				: DINT;
+	BatchName				: STRING(50);
+	Status					: STRING(50);
+	ProductName				: STRING(50);
+	BlankKeyType			: STRING(10);
+	SideBar					: STRING(10);
+	Quantity				: DINT;
+	ExternMarkingData		: DUT_stExternMarkingData;
+	Direct					: BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

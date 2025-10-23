@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="stShiftData" Id="{0f25cb05-2800-4794-8a3b-686bcb3b61fb}">
+    <Declaration><![CDATA[TYPE stShiftData :
+STRUCT
+	FLAGP : stByteAsBit;
+	WIDP : DINT;
+	
+	PmcData : DUT_St0Data;
+	stPLCData 			: DUT_stPLCData;
+	ProcessingData 		: DUT_stProcessingHMIData2;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

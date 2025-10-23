@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="PF_00_UPS" Id="{84ff622b-3f6b-488d-bbc9-8d2df8a5a67c}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PF_00_UPS
+VAR
+	fbUPS				: FB_GetUPSStatus;
+	fbWrite				: FB_WritePersistentData;
+	eState				: E_UpsPowerStatus;
+	uWriteState			: UINT :=0;
+	bWriteOK			: BOOL := FALSE;
+	bWriteStart			: BOOL;
+	RTRIG_WriteStart	: R_TRIG;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[fbUPS(	sNetID	:= '', 
+		nPort	:= , 
+		bEnable	:= TRUE);
+
+fbWrite(	NETID 	:=,
+			PORT	:= 851,
+			TMOUT	:= T#20S,
+			MODE	:= E_PersistentMode.SPDM_2PASS);
+
+HMI.Out.UPSDiagnostic.Valid := fbUPS.bValid;
+			
+IF fbUPS.bValid THEN
+
+	eState := fbUPS.stStatus.ePowerStatus;
+	
+	CASE eState OF
+		E_UpsPowerStatus.PowerOnLine:
+			IF NOT fbWrite.BUSY THEN
+				uWriteState := 0;
+				bWriteOK	:= FALSE;
+				bWriteStart := FALSE;
+			END_IF
+			
+		E_UpsPowerStatus.PowerOnBattery:
+			bWriteStart := TRUE;
+			
+		E_UpsPowerStatus.PowerUnknownStatus:
+			; // error
+	
+	END_CASE
+
+	HMI.Out.UPSDiagnostic.State := fbUPS.stStatus;	
+
+END_IF	
+
+RTRIG_WriteStart(CLK := bWriteStart);
+IF RTRIG_WriteStart.Q THEN
+	uWriteState := 10;
+END_IF
+CASE uWriteState OF
+	0:
+		;
+		
+	10:
+		fbWrite.START := TRUE;			
+		
+		uWriteState := 20;
+		
+	20:
+		IF NOT fbWrite.BUSY THEN
+			fbWrite.START := FALSE;	
+			IF fbWrite.ERR THEN
+				
+				uWriteState := 1030;
+			ELSE
+				bWriteOK:= TRUE;
+				
+				uWriteState := 0;
+			END_IF
+		END_IF
+
+END_CASE
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="PF_00_UPS">
+      <LineId Id="3" Count="7" />
+      <LineId Id="85" Count="1" />
+      <LineId Id="11" Count="1" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="13" Count="16" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="31" Count="29" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

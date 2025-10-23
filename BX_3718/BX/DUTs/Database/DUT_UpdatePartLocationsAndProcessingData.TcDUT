@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_UpdatePartLocationsAndProcessingData" Id="{6fcdc8ee-c381-4e2b-9082-d746bb80b2be}">
+    <Declaration><![CDATA[TYPE DUT_UpdatePartLocationsAndProcessingData :
+STRUCT
+	return_value	: DINT;
+	Data	: STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

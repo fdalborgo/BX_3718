@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FanucCNCEventSourceInfo" Id="{eb278cfc-817c-4a98-91b0-0c0b43968d01}">
+    <Declaration><![CDATA[TYPE ST_FanucCNCEventSourceInfo :
+STRUCT
+	SourceId : U_FanucCNCEventSourceInfo;		// 4 bytes					=  4
+	CNCName : STRING[21];						// (21 + 1) bytes			= 22
+	PathName : STRING[21];						// (21 + 1) bytes			= 22
+	AxisNames : ARRAY [1..8] OF STRING[3];		// 8 * (3 + 1) = 32 bytes	= 32
+END_STRUCT										//					Totale	= 80
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

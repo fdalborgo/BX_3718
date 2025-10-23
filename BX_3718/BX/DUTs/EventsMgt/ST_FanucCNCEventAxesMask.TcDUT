@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FanucCNCEventAxesMask" Id="{79a6ba19-2e84-4e96-bf04-27d9237bcf83}">
+    <Declaration><![CDATA[TYPE ST_FanucCNCEventAxesMask :
+STRUCT
+	Axis_1 : BIT;
+	Axis_2 : BIT;
+	Axis_3 : BIT;
+	Axis_4 : BIT;
+	Axis_5 : BIT;
+	Axis_6 : BIT;
+	Axis_7 : BIT;
+	Axis_8 : BIT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

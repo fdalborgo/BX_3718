@@ -1,0 +1,1728 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="MAIN" Id="{820a0544-c9ae-49c6-ab68-947b05754ef0}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	i					: UINT;
+	ii					: UINT;
+	fbGetCurTaskIndex 	: GETCURTASKINDEX;
+	_iDataPos 			: INT;
+	_dDataOff 			: DINT;	
+	
+	LasitManager : FB_LasitManager;
+	Lasit 		: FB_Lasit;
+	LasitFlyPowerMarkManager : FB_FlyPowerMarkManager;
+	St04_MarkingData : DUT_stMarkingData;
+	
+	fbFlyPowerMarkExeManager : FB_FlyPowerMarkExeManager;
+	fbFlyPowerMarkExeManagerInit : BOOL;
+
+// ShiftData	
+	stTempData  		: stShiftData;
+	//fbShiftManData 		: FB_PartDataManager;
+	fbShiftDataBuffer 	: FB_DataBufferManager;
+	RTRIG_ShiftTrigger 	: R_TRIG;
+	ShiftData 			: ARRAY[0..20] OF stShiftData;
+	
+	OvrMultiplierOld	: USINT;
+	TON_OvrMultFeedback : TON;
+	
+	_j		  : DINT;
+	fbDataRequest		: FB_DataRequest;
+	RTRIG_ExecuteWriteChip : R_TRIG;
+	RTRIG_ExecuteReadChip : R_TRIG;
+	
+	tempString1 : STRING;
+	tempString2 : STRING;
+	tempLayout  : STRING;
+
+	sSrvNetID		: T_AmsNetID	:= '';(* TwinCAT TCP/IP server network address *)
+	bEnable			: BOOL 			:= FALSE;(* TRUE => Enable client data exchange, FALSE => Disable *)
+	bLog			: BOOL			:= FALSE;(* TRUE => Enable log message output, FALSE => Disable *)
+
+	fbCloseAll		: FB_SocketCloseAll;
+	bInitialize		: BOOL := TRUE;
+	OvrMng			: FB_OvrMng;
+	
+	tempString	: STRING;
+	tempStringPos : INT;
+	
+	
+	tempPPString			: STRING;
+	iPP						: INT;
+	
+	RTRIG_ProcessingDataExecute	 : R_TRIG;
+	RTRIG_ProcessingDataDoneError	: R_TRIG;
+	
+	tTimeTemp					: TIME := T#100ms;
+	TempInt						: UINT;
+	tempCouth					: BOOL;
+	
+	RTRIG_GoodPieces			: R_TRIG;
+	RTRIG_Scraped				: R_TRIG;
+	RTRIG_BatchChange			: R_TRIG;
+	TepmStatus					: eProductStatus;	
+	
+	RTRIG_UnloadFromSlide		: R_TRIG;
+	RTRIG_UnloadFromLaser		: R_TRIG;
+	RTRIG_UnloadFromCart		: R_TRIG;
+	RTRIG_UnloadFromDeburring	: R_TRIG;
+	RTRIG_UnloadFromPallet		: R_TRIG;	
+	RTRIG_UnloadFromManualLoad	: R_TRIG;	
+	RTRIG_IdShift		: R_TRIG;
+	
+	RTRIG_UnloadFromSlideAck		: R_TRIG;
+	RTRIG_UnloadFromLaserAck		: R_TRIG;
+	RTRIG_UnloadFromCartAck			: R_TRIG;
+	RTRIG_UnloadFromDeburringAck	: R_TRIG;
+	RTRIG_UnloadFromPalletAck		: R_TRIG;
+	RTRIG_UnloadFromManualLoadAck	: R_TRIG;
+	
+	FTRIG_UnloadFromSlideAck		: F_TRIG;
+	FTRIG_UnloadFromLaserAck		: F_TRIG;
+	FTRIG_UnloadFromCartAck			: F_TRIG;
+	FTRIG_UnloadFromDeburringAck	: F_TRIG;
+	FTRIG_UnloadFromPalletAck		: F_TRIG;
+	FTRIG_UnloadFromManualLoadAck	: F_TRIG;
+	
+	CycleTime					: DWORD;
+	ProcessingHMIDataManager : FB_ButtonTrigger;
+	
+	fbLoadingModeSelection: FB_LoadingModeChange; 
+	
+	manualReq : BOOL;
+	LasitManualDisable : BOOL;
+	fbKillMultipleNavigationPS : FB_KillMultipleNavigationPS;
+	tempDint	: ARRAY[0..3] OF DINT;
+	tempReal	: ARRAY[0..3] OF REAL;
+	resetManual : BOOL;
+	RobotLoadOffset : ARRAY[0..EC.NUM_ROBOT_OFFSET - 1] OF DUT_XYZ_Int;
+	RobotUnloadOffset : ARRAY[0..EC.NUM_ROBOT_OFFSET - 1] OF DUT_XYZ_Int;
+	TON_MSSQL_UpdatePartLocationsAndProcessingDataBusy : TON;
+	memReq : BOOL;
+	RTRIG_MSSQL_spGetProcessingDataForHMIDone : R_TRIG;
+	RTRIG_MSSQL_spGetProcessingDataForHMIExecute : R_TRIG;
+	IdList	: ARRAY[0..10] OF DINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[fbGetCurTaskIndex();
+
+A_00_Init();			// Initialization
+
+/////////INPUT//////////////////////////////////////////////////////////
+A_10_EC_PN_Input();				// Profinet to Ethercat
+A_11_MatManager_Input();		// Buttons-Leds exchange data	
+
+////////////////////////////////////////////////////////////////////////
+//Database();
+
+//A_30_Laser();
+A_70_DataRequest();
+A_80_OvrMng();
+
+fbLoadingModeSelection(ActualMode := G.LoadingModeActive,
+					  	LoadingModeSelected:= HMI.SelectedLoadingMode,
+						LS_AutoMode := HMI.General.Manuals.LS[58],
+						LS_ManualMode := HMI.General.Manuals.LS[56],
+						LS_SemiAutoMode:= HMI.General.Manuals.LS[57],
+						PS_AutoMode => HMI.General.Manuals.PS[58],
+						PS_ManualMode => HMI.General.Manuals.PS[56],
+						PS_SemiAutoMode => HMI.General.Manuals.PS[57]);
+
+PRG_Diagnostic();
+
+/////////OUTPUT//////////////////////////////////////////////////////////
+A_90_EC_PN_Output();			// Profinet to Ethercat
+A_91_MatManager_Output();			// Buttons-Leds exchange data
+
+////////////////////////////////////////////////////////////////////////
+	
+					   
+
+
+
+]]></ST>
+    </Implementation>
+    <Action Name="A_00_Init" Id="{c09302aa-9490-43f8-a0bd-7b20dbaacfb4}">
+      <Implementation>
+        <ST><![CDATA[IF _TaskInfo[fbGetCurTaskIndex.index].FirstCycle THEN	// First cycle of this task
+	G.Ovr_CounterValue := EC.I_Ovr_CounterValue;
+	
+	//PRG_MSSQL_InitConnection.Enable := TRUE;
+	DB.MesReadStatusCmd := TRUE;
+	
+	LasitManager.Init := TRUE;
+	//fbFlyPowerMarkExeManagerInit := TRUE;
+ELSE
+	LasitManager.Init := FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_10_EC_PN_Input" Id="{7b76ae9b-1843-4001-b280-19e05c28501a}">
+      <Implementation>
+        <ST><![CDATA[// EV
+AL671[0] := I_Y400[0];
+AL671[1] := I_Y400[1];
+AL671[2] := I_Y400[2];
+AL671[3] := I_Y400[3];
+AL671[4] := I_Y400[4];
+            
+AL673[0] := I_Y400[5];
+AL673[1] := I_Y400[6];
+AL673[2] := I_Y400[7];
+AL673[3] := I_Y400[8];
+AL673[4] := I_Y400[9];
+AL673[5] := I_Y400[10];
+
+////////////////////////////////////////////////////////// Memorie R
+
+HMI.Out.KebaEnabled := I_R2200[0].0;
+G.ResetButton := CNC.vKeyboard.PS[16] OR I_R2200[0].1 OR resetManual;
+
+//ShiftData
+PRG_MSSQL_spCMD_AbortProduction.Execute 	:= I_R2200[20].2;
+
+//// Laser
+LasitManager.Execute := I_R2200[25].0 OR manualReq;
+G.LasitOn			:= I_R2200[25].1;
+
+
+G.MachineEmpty					:= I_R2200[40].0;
+HMI.out.EnableProductionAction 	:= I_R2200[41].1;
+
+RTRIG_UnloadFromSlide.CLK := I_R2200[42].0;
+RTRIG_UnloadFromLaser.CLK := I_R2200[42].1;
+RTRIG_UnloadFromCart.CLK := I_R2200[42].2;
+RTRIG_UnloadFromDeburring.CLK := I_R2200[42].3;
+RTRIG_UnloadFromPallet.CLK := I_R2200[42].4;
+RTRIG_UnloadFromManualLoad.CLK := I_R2200[42].5;
+////////////////////////////////////////////////////////// Memorie D
+
+// WId macchina e stato pezzo
+FOR _iDataPos := 1 TO CNC.NUM_DATA_POSITION+3 DO
+	_dDataOff := (_iDataPos)*5;	
+	MEMCPY(ADR(HMI.ShiftData[_iDataPos].FLAGP.aByte), ADR(CNC.I_D2200[_dDataOff]), SIZEOF(BYTE));
+	MEMCPY(ADR(HMI.ShiftData[_iDataPos].WIDP), ADR(CNC.I_D2200[_dDataOff+1]), SIZEOF(DWORD));
+END_FOR
+
+// feedback pennetta
+MEMCPY(ADR(tempDint[0]), ADR(CNC.I_D2200[100]), SIZEOF(DWORD));
+tempReal[0] := TO_REAL(tempDint[0]);
+HMI.Out.Probe.ActualEncoderValue := tempReal[0]/1000;
+
+MEMCPY(ADR(tempDint[1]), ADR(CNC.I_D2200[104]), SIZEOF(DWORD));
+tempReal[1] := TO_REAL(tempDint[1]);
+HMI.Out.Probe.ActualProbeValue := tempReal[1]/1000;
+HMI.Out.Probe.Error := CNC.I_D2200[108].0;
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_11_MatManager_Input" Id="{79639969-7436-4242-b538-5848cb792d15}">
+      <Implementation>
+        <ST><![CDATA[FC_BYTE_TO_BOOLARR(ADR(HMI.General.Manuals.LS), ADR(CNC.I_R4500[0]), SIZEOF(HMI.General.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St0.Manuals.LS), ADR(CNC.I_R4500[60]), SIZEOF(HMI.St0.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St1.Manuals.LS), ADR(CNC.I_R4500[100]), SIZEOF(HMI.St1.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St2.Manuals.LS), ADR(CNC.I_R4500[110]), SIZEOF(HMI.St2.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St3.Manuals.LS), ADR(CNC.I_R4500[120]), SIZEOF(HMI.St3.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St4.Manuals.LS), ADR(CNC.I_R4500[130]), SIZEOF(HMI.St4.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St5.Manuals.LS), ADR(CNC.I_R4500[140]), SIZEOF(HMI.St5.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St6.Manuals.LS), ADR(CNC.I_R4500[150]), SIZEOF(HMI.St6.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St7.Manuals.LS), ADR(CNC.I_R4500[160]), SIZEOF(HMI.St7.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St8.Manuals.LS), ADR(CNC.I_R4500[170]), SIZEOF(HMI.St8.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St9.Manuals.LS), ADR(CNC.I_R4500[180]), SIZEOF(HMI.St9.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St10.Manuals.LS), ADR(CNC.I_R4500[190]),	SIZEOF(HMI.St10.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St11.Manuals.LS), ADR(CNC.I_R4500[200]),	SIZEOF(HMI.St11.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St12.Manuals.LS), ADR(CNC.I_R4500[210]),	SIZEOF(HMI.St12.Manuals.LS));
+FC_BYTE_TO_BOOLARR(ADR(HMI.St13.Manuals.LS), ADR(CNC.I_R4500[220]),	SIZEOF(HMI.St13.Manuals.LS));
+
+//Navigation
+FC_BYTE_TO_BOOLARR(ADR(HMI.In.Navigation.LS[0]), ADR(CNC.I_R4500[350]), HMI.NUM_NAVIGATION_ITEMS);
+
+// vKeyboard
+FC_BYTE_TO_BOOLARR(ADR(CNC.vKeyboard.LS), ADR(CNC.I_R3950), SIZEOF(CNC.vKeyboard.LS));
+
+//MachineData Header
+FC_BYTE_TO_BOOLARR(ADR(MachineData.aBool), ADR(CNC.I_E0000[0]), SIZEOF(MachineData.aBool));
+MEMCPY(ADR(MachineData.aByte), ADR(CNC.I_E0000[10]), SIZEOF(MachineData.aByte));
+MEMCPY(ADR(MachineData.aWord), ADR(CNC.I_E0000[20]), SIZEOF(MachineData.aWord));
+
+//Safety
+MEMCPY(ADR(HMI.Out.Gc1000Status), ADR(CNC.I_E0000[29]), SIZEOF(HMI.Out.Gc1000Status));
+MEMCPY(ADR(HMI.Out.Doors), ADR(CNC.I_E0000[30]), SIZEOF(HMI.Out.Doors));
+
+//Counters
+MEMCPY(ADR(HMI.Out.Counters.TotalPieceGood), ADR(CNC.I_E0000[60]), SIZEOF(DWORD));
+MEMCPY(ADR(HMI.Out.Counters.TotalPieceScrap), ADR(CNC.I_E0000[64]), SIZEOF(DWORD));
+	
+// Machine CycleTime
+MEMCPY(ADR(CycleTime), ADR(CNC.I_E0000[96]), SIZEOF(CycleTime));
+	
+//MachineData Station	
+MEMCPY(ADR(MachineData.aSt[1]), ADR(CNC.I_E0000[100]), SIZEOF(MachineData.aSt));
+
+// Lasit - senza indirizzo MB
+LasitFlyPowerMarkManager.In := (CNC.FlyPowerMarkOn = 1);	
+
+//Richiesta dato
+MEMCPY(ADR(DataRequestRead.aByte[0]), ADR(CNC.HS_read[0]), SIZEOF(BYTE));
+MEMCPY(ADR(DataRequestRead.aDWord), ADR(CNC.HS_read[6]), SIZEOF(DWORD));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_30_Laser" Id="{998780bc-1d00-4afc-9aa8-e55bab9192fd}">
+      <Implementation>
+        <NWL>
+          <XmlArchive>
+            <Data>
+              <o xml:space="preserve" t="NWLImplementationObject">
+                <v n="NetworkListComment">""</v>
+                <v n="DefaultViewMode">"Fbd"</v>
+                <l2 n="NetworkList" cet="Network">
+                  <o>
+                    <v n="ILActive">false</v>
+                    <v n="FBDValid">false</v>
+                    <v n="ILValid">false</v>
+                    <l2 n="ILLines" />
+                    <v n="Comment">""</v>
+                    <v n="Title">""</v>
+                    <v n="Label">""</v>
+                    <v n="OutCommented">false</v>
+                    <l2 n="NetworkItems" cet="BoxTreeBox">
+                      <o>
+                        <v n="BoxType">"FB_FlyPowerMarkManager"</v>
+                        <o n="Instance" t="Operand">
+                          <v n="Operand">"LasitFlyPowerMarkManager"</v>
+                          <v n="Type">"FB_FlyPowerMarkManager"</v>
+                          <v n="Comment">""</v>
+                          <v n="SymbolComment">""</v>
+                          <v n="Address">""</v>
+                          <o n="Flags" t="Flags">
+                            <v n="Flags">0</v>
+                            <v n="Fixed">false</v>
+                            <v n="Extensible">false</v>
+                          </o>
+                          <v n="LValue">false</v>
+                          <v n="Boolean">false</v>
+                          <v n="IsInstance">true</v>
+                          <v n="Id">142L</v>
+                        </o>
+                        <o n="OutputItems" t="OutputItemList">
+                          <l2 n="OutputItems">
+                            <n />
+                          </l2>
+                        </o>
+                        <o n="Flags" t="Flags">
+                          <v n="Flags">0</v>
+                          <v n="Fixed">true</v>
+                          <v n="Extensible">false</v>
+                        </o>
+                        <n n="InputFlags" />
+                        <l2 n="InputItems" cet="BoxTreeOperand">
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">131L</v>
+                            </o>
+                            <v n="Id">130L</v>
+                          </o>
+                        </l2>
+                        <o n="InputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>In</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>BOOL</v>
+                          </l2>
+                        </o>
+                        <o n="OutputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>Out</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>BOOL</v>
+                          </l2>
+                        </o>
+                        <v n="CallType" t="Operator">FunctionBlock</v>
+                        <v n="EN">false</v>
+                        <v n="ENO">false</v>
+                        <n n="STSnippet" />
+                        <v n="ContainsExtensibleInputs">false</v>
+                        <v n="ProvidesSTSnippet">false</v>
+                        <v n="Id">143L</v>
+                      </o>
+                    </l2>
+                    <l2 n="Connectors" />
+                    <v n="Id">125L</v>
+                  </o>
+                  <o>
+                    <v n="ILActive">false</v>
+                    <v n="FBDValid">false</v>
+                    <v n="ILValid">false</v>
+                    <l2 n="ILLines" />
+                    <v n="Comment">""</v>
+                    <v n="Title">""</v>
+                    <v n="Label">""</v>
+                    <v n="OutCommented">false</v>
+                    <l2 n="NetworkItems" cet="BoxTreeBox">
+                      <o>
+                        <v n="BoxType">"FB_Lasit"</v>
+                        <o n="Instance" t="Operand">
+                          <v n="Operand">"Lasit"</v>
+                          <v n="Type">"FB_Lasit"</v>
+                          <v n="Comment">""</v>
+                          <v n="SymbolComment">""</v>
+                          <v n="Address">""</v>
+                          <o n="Flags" t="Flags">
+                            <v n="Flags">0</v>
+                            <v n="Fixed">false</v>
+                            <v n="Extensible">false</v>
+                          </o>
+                          <v n="LValue">false</v>
+                          <v n="Boolean">false</v>
+                          <v n="IsInstance">true</v>
+                          <v n="Id">56L</v>
+                        </o>
+                        <o n="OutputItems" t="OutputItemList">
+                          <l2 n="OutputItems" cet="Operand">
+                            <n />
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">58L</v>
+                            </o>
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">59L</v>
+                            </o>
+                          </l2>
+                        </o>
+                        <o n="Flags" t="Flags">
+                          <v n="Flags">0</v>
+                          <v n="Fixed">true</v>
+                          <v n="Extensible">false</v>
+                        </o>
+                        <n n="InputFlags" />
+                        <l2 n="InputItems" cet="BoxTreeOperand">
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"LasitFlyPowerMarkManager.Out"</v>
+                              <v n="Type">"BOOL"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">61L</v>
+                            </o>
+                            <v n="Id">60L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">63L</v>
+                            </o>
+                            <v n="Id">62L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"'127.0.0.1'"</v>
+                              <v n="Type">"STRING(INT#9)"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">65L</v>
+                            </o>
+                            <v n="Id">64L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"5200"</v>
+                              <v n="Type">"INT"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">67L</v>
+                            </o>
+                            <v n="Id">66L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"FALSE"</v>
+                              <v n="Type">"BOOL"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">69L</v>
+                            </o>
+                            <v n="Id">68L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"'CLIENT::'"</v>
+                              <v n="Type">"STRING(INT#8)"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">71L</v>
+                            </o>
+                            <v n="Id">70L</v>
+                          </o>
+                        </l2>
+                        <o n="InputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>bEnable</v>
+                            <v>sSrvNetID</v>
+                            <v>sRemoteHost</v>
+                            <v>nRemotePort</v>
+                            <v>bLogEnable</v>
+                            <v>sLogPrefix</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>BOOL</v>
+                            <v>T_AmsNetID</v>
+                            <v>T_IPv4Addr</v>
+                            <v>UDINT</v>
+                            <v>BOOL</v>
+                            <v>STRING</v>
+                          </l2>
+                        </o>
+                        <o n="OutputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>sData</v>
+                            <v>bConnected</v>
+                            <v>Connecting</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>T_MaxString</v>
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                          </l2>
+                        </o>
+                        <v n="CallType" t="Operator">FunctionBlock</v>
+                        <v n="EN">false</v>
+                        <v n="ENO">false</v>
+                        <n n="STSnippet" />
+                        <v n="ContainsExtensibleInputs">false</v>
+                        <v n="ProvidesSTSnippet">false</v>
+                        <v n="Id">57L</v>
+                      </o>
+                    </l2>
+                    <l2 n="Connectors" />
+                    <v n="Id">55L</v>
+                  </o>
+                  <o>
+                    <v n="ILActive">false</v>
+                    <v n="FBDValid">false</v>
+                    <v n="ILValid">false</v>
+                    <l2 n="ILLines" />
+                    <v n="Comment">""</v>
+                    <v n="Title">""</v>
+                    <v n="Label">""</v>
+                    <v n="OutCommented">false</v>
+                    <l2 n="NetworkItems" cet="BoxTreeBox">
+                      <o>
+                        <v n="BoxType">"FB_LasitManager"</v>
+                        <o n="Instance" t="Operand">
+                          <v n="Operand">"LasitManager"</v>
+                          <v n="Type">"FB_LasitManager"</v>
+                          <v n="Comment">""</v>
+                          <v n="SymbolComment">""</v>
+                          <v n="Address">""</v>
+                          <o n="Flags" t="Flags">
+                            <v n="Flags">0</v>
+                            <v n="Fixed">false</v>
+                            <v n="Extensible">false</v>
+                          </o>
+                          <v n="LValue">false</v>
+                          <v n="Boolean">false</v>
+                          <v n="IsInstance">true</v>
+                          <v n="Id">123L</v>
+                        </o>
+                        <o n="OutputItems" t="OutputItemList">
+                          <l2 n="OutputItems" cet="Operand">
+                            <n />
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">106L</v>
+                            </o>
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">107L</v>
+                            </o>
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">108L</v>
+                            </o>
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">109L</v>
+                            </o>
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">110L</v>
+                            </o>
+                          </l2>
+                        </o>
+                        <o n="Flags" t="Flags">
+                          <v n="Flags">0</v>
+                          <v n="Fixed">true</v>
+                          <v n="Extensible">false</v>
+                        </o>
+                        <n n="InputFlags" />
+                        <l2 n="InputItems" cet="BoxTreeOperand">
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">101L</v>
+                            </o>
+                            <v n="Id">100L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"HMI.St0.Manuals.LS[12] OR LasitManualDisable"</v>
+                              <v n="Type">"BOOL"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">112L</v>
+                            </o>
+                            <v n="Id">111L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">114L</v>
+                            </o>
+                            <v n="Id">113L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">116L</v>
+                            </o>
+                            <v n="Id">115L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"T#0s"</v>
+                              <v n="Type">"TIME"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">118L</v>
+                            </o>
+                            <v n="Id">117L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"HMI.ShiftData[4].stPLCData.MarkingData"</v>
+                              <v n="Type">"DUT_stMarkingData"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">120L</v>
+                            </o>
+                            <v n="Id">119L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"Lasit"</v>
+                              <v n="Type">"FB_Lasit"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">122L</v>
+                            </o>
+                            <v n="Id">121L</v>
+                          </o>
+                        </l2>
+                        <o n="InputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>Init</v>
+                            <v>Disable</v>
+                            <v>Execute</v>
+                            <v>ReqBackSide</v>
+                            <v>TimeoutCycle</v>
+                            <v>MarkingData</v>
+                            <v>fblasit</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                            <v>TIME</v>
+                            <v>DUT_stMarkingData[REF]</v>
+                            <v>FB_Lasit[REF]</v>
+                          </l2>
+                        </o>
+                        <o n="OutputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>Busy</v>
+                            <v>Done</v>
+                            <v>DoneBackSide</v>
+                            <v>Error</v>
+                            <v>ErrorBackSide</v>
+                            <v>ErrorID</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                            <v>INT</v>
+                          </l2>
+                        </o>
+                        <v n="CallType" t="Operator">FunctionBlock</v>
+                        <v n="EN">false</v>
+                        <v n="ENO">false</v>
+                        <n n="STSnippet" />
+                        <v n="ContainsExtensibleInputs">false</v>
+                        <v n="ProvidesSTSnippet">false</v>
+                        <v n="Id">124L</v>
+                      </o>
+                    </l2>
+                    <l2 n="Connectors" />
+                    <v n="Id">72L</v>
+                  </o>
+                  <o>
+                    <v n="ILActive">false</v>
+                    <v n="FBDValid">false</v>
+                    <v n="ILValid">false</v>
+                    <l2 n="ILLines" />
+                    <v n="Comment">""</v>
+                    <v n="Title">""</v>
+                    <v n="Label">""</v>
+                    <v n="OutCommented">false</v>
+                    <l2 n="NetworkItems" cet="BoxTreeBox">
+                      <o>
+                        <v n="BoxType">"FB_FlyPowerMarkExeManager"</v>
+                        <o n="Instance" t="Operand">
+                          <v n="Operand">"fbFlyPowerMarkExeManager"</v>
+                          <v n="Type">"FB_FlyPowerMarkExeManager"</v>
+                          <v n="Comment">""</v>
+                          <v n="SymbolComment">""</v>
+                          <v n="Address">""</v>
+                          <o n="Flags" t="Flags">
+                            <v n="Flags">0</v>
+                            <v n="Fixed">false</v>
+                            <v n="Extensible">false</v>
+                          </o>
+                          <v n="LValue">false</v>
+                          <v n="Boolean">false</v>
+                          <v n="IsInstance">true</v>
+                          <v n="Id">166L</v>
+                        </o>
+                        <o n="OutputItems" t="OutputItemList">
+                          <l2 n="OutputItems" cet="Operand">
+                            <n />
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">147L</v>
+                            </o>
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">148L</v>
+                            </o>
+                          </l2>
+                        </o>
+                        <o n="Flags" t="Flags">
+                          <v n="Flags">0</v>
+                          <v n="Fixed">true</v>
+                          <v n="Extensible">false</v>
+                        </o>
+                        <n n="InputFlags" />
+                        <l2 n="InputItems" cet="BoxTreeOperand">
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"HMI.Out.UPSDiagnostic.State.ePowerStatus"</v>
+                              <v n="Type">"E_UpsPowerStatus"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">153L</v>
+                            </o>
+                            <v n="Id">152L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"G.LasitOn"</v>
+                              <v n="Type">"BOOL"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">155L</v>
+                            </o>
+                            <v n="Id">154L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">157L</v>
+                            </o>
+                            <v n="Id">156L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"fbFlyPowerMarkExeManagerInit"</v>
+                              <v n="Type">"BOOL"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">159L</v>
+                            </o>
+                            <v n="Id">158L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"MAIN_SERVICE.NT_OpenExe"</v>
+                              <v n="Type">"NT_StartProcess"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">161L</v>
+                            </o>
+                            <v n="Id">160L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"MAIN_SERVICE.NT_CloseExe"</v>
+                              <v n="Type">"NT_StartProcess"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">163L</v>
+                            </o>
+                            <v n="Id">162L</v>
+                          </o>
+                        </l2>
+                        <o n="InputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>UpsPowerStatus</v>
+                            <v>LasitControllerOn</v>
+                            <v>Reset</v>
+                            <v>Init</v>
+                            <v>NT_OpenExe</v>
+                            <v>NT_CloseExe</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>E_UpsPowerStatus</v>
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                            <v>BOOL[REF]</v>
+                            <v>NT_StartProcess[REF]</v>
+                            <v>NT_StartProcess[REF]</v>
+                          </l2>
+                        </o>
+                        <o n="OutputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>Error</v>
+                            <v>ErrorID</v>
+                            <v>ErrorSubID</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>BOOL</v>
+                            <v>INT</v>
+                            <v>INT</v>
+                          </l2>
+                        </o>
+                        <v n="CallType" t="Operator">FunctionBlock</v>
+                        <v n="EN">false</v>
+                        <v n="ENO">false</v>
+                        <n n="STSnippet" />
+                        <v n="ContainsExtensibleInputs">false</v>
+                        <v n="ProvidesSTSnippet">false</v>
+                        <v n="Id">167L</v>
+                      </o>
+                    </l2>
+                    <l2 n="Connectors" />
+                    <v n="Id">144L</v>
+                  </o>
+                </l2>
+                <v n="BranchCounter">0</v>
+                <v n="ValidIds">true</v>
+              </o>
+            </Data>
+            <TypeList>
+              <Type n="Boolean">System.Boolean</Type>
+              <Type n="BoxTreeBox">{acfc6f68-8e3a-4af5-bf81-3dd512095a46}</Type>
+              <Type n="BoxTreeOperand">{9de7f100-1b87-424c-a62e-45b0cfc85ed2}</Type>
+              <Type n="Flags">{668066f2-6069-46b3-8962-8db8d13d7db2}</Type>
+              <Type n="Int32">System.Int32</Type>
+              <Type n="Int64">System.Int64</Type>
+              <Type n="Network">{d9a99d73-b633-47db-b876-a752acb25871}</Type>
+              <Type n="NWLImplementationObject">{25e509de-33d4-4447-93f8-c9e4ea381c8b}</Type>
+              <Type n="Operand">{c9b2f165-48a2-4a45-8326-3952d8a3d708}</Type>
+              <Type n="Operator">{bffb3c53-f105-4e85-aba2-e30df579d75f}</Type>
+              <Type n="OutputItemList">{f40d3e09-c02c-4522-a88c-dac23558cfc4}</Type>
+              <Type n="ParamList">{71496971-9e0c-4677-a832-b9583b571130}</Type>
+              <Type n="String">System.String</Type>
+            </TypeList>
+          </XmlArchive>
+        </NWL>
+      </Implementation>
+    </Action>
+    <Action Name="A_70_DataRequest" Id="{3461f731-c67f-4176-b757-bd7836528b42}">
+      <Implementation>
+        <ST><![CDATA[fbDataRequest( ExecuteCurrent  := CNC.DataRequestRead.aByte[0].aBit.b0 OR G.RequestActual,
+			   ExecuteNext	:= CNC.DataRequestRead.aByte[0].aBit.b1 OR G.RequestNext, 
+			   Reset 		:= G.ResetButton,
+			   WID			:= CNC.DataRequestRead.aDWord,
+			   WID_Old		:= G.WID_Old,
+			   MachineEmpty	:= G.MachineEmpty,
+			   Done			=> CNC.DataRequestWrite.aByte[0].aBit.b0,
+			   Busy			=> ,
+			   Error		=> CNC.DataRequestWrite.aByte[0].aBit.b1,
+			   ErrorCodePMC => CNC.DataRequestWrite.aByte[1].aByte,		 
+			   St0Data 		:= St0DataTemp,
+			   PMC_ShiftManData0 := HMI.ShiftData[0],
+			   fbShiftDataBuffer := fbShiftDataBuffer);
+			   
+fbShiftDataBuffer(ArraySize := UINT_TO_INT(G.DATABUFFER_SIZE), DataRepository := ADR(G.DataBuffer));
+FOR i := 1 TO NUM_STATIONS DO
+	FC_DataFind(HMI.ShiftData[i].WIDP, ADR(HMI.ShiftData[i].PmcData), ADR(HMI.ShiftData[i].stPLCData), ADR(G.DataBuffer));
+	IF HMI.ShiftData[i].WIDP = DB.ProcessingHMIDataLocation[i].PartId THEN	
+		HMI.ShiftData[i].ProcessingData := DB.ProcessingHMIDataViewData[i];
+	END_IF
+END_FOR
+
+FOR i := 0 TO NUM_STATIONS DO
+	IdList[i] := HMI.ShiftData[i].WIDP;
+END_FOR
+
+IF NOT G.MachineEmpty AND MEMCMP(ADR(IdList), ADR(G.IdList_Old), SIZEOF(IdList)) <> 0 THEN
+	G.UpdatePartLocationsAndProcessingDataTrigger := TRUE;
+	MEMCPY(ADR(G.IdList_Old), ADR(IdList), SIZEOF(G.IdList_Old));
+END_IF
+
+//unload managment
+//////////////////////Prima di rimuovere i dati dalla struttura mi salvo info per gestire tutto il resto //////////////////////
+////////////////////// updateProcessingData per database, dati per oee per sapere se pezzo ok o scarto //////////////////////
+////////////////////// NOTA LA POSIZIONE 17 è DOVE VENGONO SALVATI I DATI DEL PEZZO SCARICATO DAL PMC //////////////////////
+
+IF RTRIG_UnloadFromSlide.Q THEN
+	FC_UnloadManager(G.fbProcessingData[1].UnloadingStation, HMI.ShiftData[17].FLAGP);
+	G.PMCShiftDataSlide := HMI.ShiftData[17];
+	FC_OeeSetUpdateCount(HMI.ShiftData[17].FLAGP);
+	FC_UpdatePieceCount(HMI.ShiftData[17].FLAGP, ADR(HMI.Out.Header.Pieces));
+END_IF
+IF RTRIG_UnloadFromLaser.Q THEN
+	FC_UnloadManager(G.fbProcessingData[2].UnloadingStation, HMI.ShiftData[17].FLAGP);
+	G.PMCShiftDataLaser := HMI.ShiftData[17];
+	FC_OeeSetUpdateCount(HMI.ShiftData[17].FLAGP);
+	FC_UpdatePieceCount(HMI.ShiftData[17].FLAGP, ADR(HMI.Out.Header.Pieces));
+END_IF
+IF RTRIG_UnloadFromCart.Q THEN
+	FC_UnloadManager(G.fbProcessingData[5].UnloadingStation, HMI.ShiftData[17].FLAGP);
+	G.PMCShiftDataCart := HMI.ShiftData[17];
+	FC_OeeSetUpdateCount(HMI.ShiftData[17].FLAGP);
+	FC_UpdatePieceCount(HMI.ShiftData[17].FLAGP, ADR(HMI.Out.Header.Pieces));
+END_IF
+IF RTRIG_UnloadFromDeburring.Q THEN
+	FC_UnloadManager(G.fbProcessingData[8].UnloadingStation, HMI.ShiftData[17].FLAGP);
+	G.PMCShiftDataDeburring := HMI.ShiftData[17];
+	FC_OeeSetUpdateCount(HMI.ShiftData[17].FLAGP);
+	FC_UpdatePieceCount(HMI.ShiftData[17].FLAGP, ADR(HMI.Out.Header.Pieces));
+END_IF
+IF RTRIG_UnloadFromPallet.Q THEN
+	FC_UnloadManager(G.fbProcessingData[9].UnloadingStation, HMI.ShiftData[17].FLAGP);
+	G.PMCShiftDataPallet := HMI.ShiftData[17];
+	FC_OeeSetUpdateCount(HMI.ShiftData[17].FLAGP);
+	FC_UpdatePieceCount(HMI.ShiftData[17].FLAGP, ADR(HMI.Out.Header.Pieces));
+END_IF
+IF RTRIG_UnloadFromManualLoad.Q THEN
+	FC_UnloadManager(G.fbProcessingData[14].UnloadingStation, HMI.ShiftData[17].FLAGP);
+	G.PMCShiftDataPallet := HMI.ShiftData[17];
+	FC_OeeSetUpdateCount(HMI.ShiftData[17].FLAGP);
+	FC_UpdatePieceCount(HMI.ShiftData[17].FLAGP, ADR(HMI.Out.Header.Pieces));	
+END_IF
+
+RTRIG_UnloadFromSlide(Q => DB.fbTriggerSequencer.In[0]);
+RTRIG_UnloadFromLaser(Q => DB.fbTriggerSequencer.In[1]);
+RTRIG_UnloadFromCart(Q => DB.fbTriggerSequencer.In[2]);
+RTRIG_UnloadFromDeburring(Q => DB.fbTriggerSequencer.In[3]);
+RTRIG_UnloadFromPallet(Q => DB.fbTriggerSequencer.In[4]);
+RTRIG_UnloadFromManualLoad(Q => DB.fbTriggerSequencer.In[5]);
+RTRIG_IdShift(CLK := G.UpdatePartLocationsAndProcessingDataTrigger,Q => DB.fbTriggerSequencer.In[5]);
+
+//////////////////////////////////////////////////////////////////////////////
+// dopo UpdatePartLocationAndProcessingData posso richiedere a database i ProcessingDataHMI aggiornati 	   
+//RTRIG_ProcessingHMIDataExecute(CLK:= PRG_MSSQL_UpdatePartLocationsAndProcessingData.Done);
+TON_MSSQL_UpdatePartLocationsAndProcessingDataBusy(IN := NOT PRG_MSSQL_UpdatePartLocationsAndProcessingData.Busy AND NOT PRG_MSSQL_UpdatePartLocationsAndProcessingData.Execute, PT := T#100MS);
+ProcessingHMIDataManager(I_Command			:= (fbDataRequest.Done OR PRG_MSSQL_UpdatePartLocationsAndProcessingData.Done)
+												AND NOT PRG_MSSQL_UpdatePartLocationsAndProcessingData.Execute AND NOT PRG_MSSQL_UpdatePartLocationsAndProcessingData.Busy,
+                     	 I_CommandEnable	:= TRUE,	
+                     	 I_Reset			:= PRG_MSSQL_spGetProcessingDataForHMI.Done OR PRG_MSSQL_spGetProcessingDataForHMI.Error,	
+                     	 I_ResetEnable		:= TRUE,
+						 Q_Out				:= PRG_MSSQL_spGetProcessingDataForHMI.Execute);
+
+RTRIG_MSSQL_spGetProcessingDataForHMIDone(CLK := PRG_MSSQL_spGetProcessingDataForHMI.Done);						 
+IF RTRIG_MSSQL_spGetProcessingDataForHMIDone.Q THEN
+	memReq := TRUE;
+END_IF
+
+IF memReq AND NOT HMI.Out.ProductionQueueRefresh THEN
+	memReq := FALSE;
+END_IF
+						 
+			 ]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_80_OvrMng" Id="{d71d79e9-91f9-4f74-addd-612ef513c705}">
+      <Implementation>
+        <ST><![CDATA[
+IF MachineData.aByte[3] <> 10 AND MachineData.aByte[3] <> 1 THEN
+	OvrMng.I_Multiplier := 1;
+ELSE
+	OvrMng.I_Multiplier := MachineData.aByte[3];
+END_IF
+
+
+OvrMng(
+	I_CounterValue 		:= EC.I_Ovr_CounterValue,
+	I_SetCounterDone 	:= EC.I_Ovr_SetCounterDone,
+	I_Overflow			:= EC.I_Ovr_Overflow,
+	I_Underflow			:= EC.I_Ovr_Underflow,
+	I_CounterValueOld	:= G.Ovr_CounterValue,
+	I_Multiplier		:=,
+	I_SetCounter		:=,
+	I_SetCounterValue	:=,
+	I_OvrMaxValue		:= 100,
+	I_OvrMinValue		:= 0,
+	Q_SetCounter 		=> EC.Q_Ovr_SetCounter,
+	Q_SetCounterValue	=> EC.Q_Ovr_SetCounterValue,
+	Q_Ovr				:= G.Ovr
+);]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_90_EC_PN_Output" Id="{3970479d-1672-45b7-8700-f9046a1fe6de}">
+      <Implementation>
+        <ST><![CDATA[////////////////////////////////////////////////////////// Memorie R
+/// allarme beckhoff ferma in fase PMC
+Q_R2000[0].0 := MAIN_SERVICE.MSSQL_Events.Cumulative OR MAIN_SERVICE.Marker_Events.Cumulative OR MAIN_SERVICE.DataRequest_Events.Cumulative;
+
+//Svuotamento forzato
+CNC.Q_R2000[20].2 := PRG_MSSQL_spCMD_AbortProduction.Done;
+CNC.Q_R2000[20].3 := PRG_MSSQL_spCMD_AbortProduction.Error;
+
+//// Laser
+Q_R2000[25].0 := LasitManager.Done;	
+Q_R2000[25].1 := LasitManager.Error;
+
+// Ack unload trigger
+RTRIG_UnloadFromSlideAck(CLK := G.fbProcessingData[1].UnloadingStation);
+RTRIG_UnloadFromLaserAck(CLK := G.fbProcessingData[2].UnloadingStation);
+RTRIG_UnloadFromCartAck(CLK := G.fbProcessingData[5].UnloadingStation);
+RTRIG_UnloadFromDeburringAck(CLK := G.fbProcessingData[8].UnloadingStation);
+RTRIG_UnloadFromPalletAck(CLK := G.fbProcessingData[9].UnloadingStation);
+RTRIG_UnloadFromManualLoadAck(CLK := G.fbProcessingData[14].UnloadingStation);
+
+FTRIG_UnloadFromSlideAck(CLK := RTRIG_UnloadFromSlide.CLK);
+FTRIG_UnloadFromLaserAck(CLK := RTRIG_UnloadFromLaser.CLK);
+FTRIG_UnloadFromCartAck(CLK := RTRIG_UnloadFromCart.CLK);
+FTRIG_UnloadFromDeburringAck(CLK := RTRIG_UnloadFromDeburring.CLK);
+FTRIG_UnloadFromPalletAck(CLK := RTRIG_UnloadFromPallet.CLK);
+FTRIG_UnloadFromManualLoadAck(CLK := RTRIG_UnloadFromManualLoad.CLK);
+
+IF RTRIG_UnloadFromSlideAck.Q THEN 		Q_R2000[42].0 := TRUE; END_IF
+IF RTRIG_UnloadFromLaserAck.Q THEN 		Q_R2000[42].1 := TRUE; END_IF
+IF RTRIG_UnloadFromCartAck.Q THEN 		Q_R2000[42].2 := TRUE; END_IF
+IF RTRIG_UnloadFromDeburringAck.Q THEN 	Q_R2000[42].3 := TRUE; END_IF
+IF RTRIG_UnloadFromPalletAck.Q THEN 	Q_R2000[42].4 := TRUE; END_IF
+IF RTRIG_UnloadFromManualLoadAck.Q THEN 	Q_R2000[42].5 := TRUE; END_IF
+
+IF FTRIG_UnloadFromSlideAck.Q THEN 		Q_R2000[42].0 := FALSE; END_IF
+IF FTRIG_UnloadFromLaserAck.Q THEN 		Q_R2000[42].1 := FALSE; END_IF
+IF FTRIG_UnloadFromCartAck.Q THEN 		Q_R2000[42].2 := FALSE; END_IF
+IF FTRIG_UnloadFromDeburringAck.Q THEN 	Q_R2000[42].3 := FALSE; END_IF
+IF FTRIG_UnloadFromPalletAck.Q THEN 	Q_R2000[42].4 := FALSE; END_IF
+IF FTRIG_UnloadFromManualLoadAck.Q THEN 	Q_R2000[42].5 := FALSE; END_IF
+
+////////////////////////////////////////////////////////// Memorie D
+
+//Ovr
+CNC.Q_D2000[0] := G.Ovr;
+
+//Robot load override 
+CNC.Q_D2000[2] := TO_BYTE( MIN(HMI.RobotLoadSetpoint.Override, EC.NUM_MAX_ROBOT_OVR) );
+
+//Robot unload override 
+CNC.Q_D2000[3] := TO_BYTE( MIN(HMI.RobotUnloadSetpoint.Override, EC.NUM_MAX_ROBOT_OVR) );
+
+// soglie pennetta
+HMI.Out.Probe.UpperLimit := 0.1;
+tempDint[2] := TO_DINT(HMI.Out.Probe.UpperLimit*1000);
+MEMCPY(ADR(CNC.Q_D2000[4]), ADR(tempDint[2]), SIZEOF(DWORD));
+HMI.Out.Probe.LowerLimit := -0.1;
+tempDint[3] := TO_DINT(HMI.Out.Probe.LowerLimit*1000);
+MEMCPY(ADR(CNC.Q_D2000[8]), ADR(tempDint[3]), SIZEOF(DWORD));
+
+// questo serve perchè pannello fa schifo
+IF HMI.St4.BroachTarget = 0 THEN HMI.St4.BroachTarget := 1; END_IF
+IF HMI.St5.BroachTarget = 0 THEN HMI.St5.BroachTarget := 1; END_IF
+IF HMI.St6.BroachTarget = 0 THEN HMI.St6.BroachTarget := 1; END_IF
+IF HMI.St7.BroachTarget = 0 THEN HMI.St7.BroachTarget := 1; END_IF
+IF HMI.St8.BroachTarget = 0 THEN HMI.St8.BroachTarget := 1; END_IF
+IF HMI.St9.BroachTarget = 0 THEN HMI.St9.BroachTarget := 1; END_IF
+IF HMI.St10.BroachTarget = 0 THEN HMI.St10.BroachTarget := 1; END_IF
+
+// Broccia tagert per comando vai a
+CNC.Q_D2000[20] := TO_BYTE( MAX( MIN(HMI.St4.BroachTarget,  EC.NUM_MAX_BROACH), EC.NUM_MIN_BROACH) );
+CNC.Q_D2000[21] := TO_BYTE( MAX( MIN(HMI.St5.BroachTarget,  EC.NUM_MAX_BROACH), EC.NUM_MIN_BROACH) );
+CNC.Q_D2000[22] := TO_BYTE( MAX( MIN(HMI.St6.BroachTarget,  EC.NUM_MAX_BROACH), EC.NUM_MIN_BROACH) );
+CNC.Q_D2000[23] := TO_BYTE( MAX( MIN(HMI.St7.BroachTarget,  EC.NUM_MAX_BROACH), EC.NUM_MIN_BROACH) );
+CNC.Q_D2000[24] := TO_BYTE( MAX( MIN(HMI.St8.BroachTarget,  EC.NUM_MAX_BROACH), EC.NUM_MIN_BROACH) );
+CNC.Q_D2000[25] := TO_BYTE( MAX( MIN(HMI.St9.BroachTarget,  EC.NUM_MAX_BROACH), EC.NUM_MIN_BROACH) );
+CNC.Q_D2000[26] := TO_BYTE( MAX( MIN(HMI.St10.BroachTarget, EC.NUM_MAX_BROACH), EC.NUM_MIN_BROACH) );
+
+// dragante
+MEMCPY(ADR(CNC.Q_D2000[28]), ADR(HMI.ChipConveyorSetpoint), SIZEOF(WORD));
+
+// dragante
+MEMCPY(ADR(CNC.Q_D2000[30]), ADR(HMI.DropsaSetpoint), SIZEOF(WORD));
+
+//Robot load offset
+FOR i := 0 TO EC.NUM_ROBOT_OFFSET - 1 DO
+	RobotLoadOffset[i].X := TO_INT(HMI.RobotLoadSetpoint.PositionOffset[i].X *1000);
+	RobotLoadOffset[i].Y := TO_INT(HMI.RobotLoadSetpoint.PositionOffset[i].Y *1000);
+	RobotLoadOffset[i].Z := TO_INT(HMI.RobotLoadSetpoint.PositionOffset[i].Z *1000);
+END_FOR
+MEMCPY(ADR(CNC.Q_D2000[40]), ADR(RobotLoadOffset), SIZEOF(DUT_XYZ_Int)*EC.NUM_ROBOT_OFFSET);
+
+//Robot unload offset
+FOR i := 0 TO EC.NUM_ROBOT_OFFSET - 1 DO
+	RobotUnloadOffset[i].X := TO_INT(HMI.RobotUnloadSetpoint.PositionOffset[i].X *1000);
+	RobotUnloadOffset[i].Y := TO_INT(HMI.RobotUnloadSetpoint.PositionOffset[i].Y *1000);
+	RobotUnloadOffset[i].Z := TO_INT(HMI.RobotUnloadSetpoint.PositionOffset[i].Z *1000);
+END_FOR	
+MEMCPY(ADR(CNC.Q_D2000[64]), ADR(RobotUnloadOffset), SIZEOF(DUT_XYZ_Int)*EC.NUM_ROBOT_OFFSET);
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_91_MatManager_Output" Id="{33101643-ae07-42e3-bbc6-a1fedc00a912}">
+      <Implementation>
+        <ST><![CDATA[FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[0]), ADR(HMI.General.Manuals.PS), SIZEOF(HMI.General.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[60]), ADR(HMI.St0.Manuals.PS), SIZEOF(HMI.St0.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[100]), ADR(HMI.St1.Manuals.PS), SIZEOF(HMI.St1.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[110]), ADR(HMI.St2.Manuals.PS), SIZEOF(HMI.St2.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[120]), ADR(HMI.St3.Manuals.PS), SIZEOF(HMI.St3.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[130]), ADR(HMI.St4.Manuals.PS), SIZEOF(HMI.St4.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[140]), ADR(HMI.St5.Manuals.PS), SIZEOF(HMI.St5.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[150]), ADR(HMI.St6.Manuals.PS), SIZEOF(HMI.St6.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[160]), ADR(HMI.St7.Manuals.PS), SIZEOF(HMI.St7.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[170]), ADR(HMI.St8.Manuals.PS), SIZEOF(HMI.St8.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[180]), ADR(HMI.St9.Manuals.PS), SIZEOF(HMI.St9.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[190]), ADR(HMI.St10.Manuals.PS), SIZEOF(HMI.St10.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[200]), ADR(HMI.St11.Manuals.PS), SIZEOF(HMI.St11.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[210]), ADR(HMI.St12.Manuals.PS), SIZEOF(HMI.St12.Manuals.PS));
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[220]), ADR(HMI.St13.Manuals.PS), SIZEOF(HMI.St13.Manuals.PS));
+
+//Navigation
+// funzione di sicurezza se si inchioda qualcosa a scada per problemi
+fbKillMultipleNavigationPS(Ps := ADR(HMI.In.Navigation.PS[0]));
+//
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R4000[350]), ADR(HMI.In.Navigation.PS[0]), HMI.NUM_NAVIGATION_ITEMS);
+
+// vKeyboard
+FC_BOOLARR_TO_BYTE(ADR(CNC.Q_R3900), ADR(CNC.vKeyboard.PS), SIZEOF(CNC.vKeyboard.PS));
+
+//Richiesta dato
+//MEMCPY(ADR(St0Data), ADR(St0DataTemp), SIZEOF(BYTE)*5);
+MEMCPY(ADR(St0Data[0]), ADR(St0DataTemp.FlagP), SIZEOF(BYTE)*6);
+MEMCPY(ADR(St0Data[6]), ADR(St0DataTemp.RunP), SIZEOF(DWORD));
+MEMCPY(ADR(St0Data[10]), ADR(St0DataTemp.WindP), SIZEOF(DWORD)*2);
+MEMCPY(ADR(St0Data[18]), ADR(St0DataTemp.Tpcy), SIZEOF(BYTE)*50);
+MEMCPY(ADR(St0Data[68]), ADR(St0DataTemp.Data[1]), SIZEOF(DWORD)*93);
+MEMCPY(ADR(St0Data[440]), ADR(St0DataTemp.DataB[1]), SIZEOF(DWORD)*20);
+MEMCPY(ADR(St0Data[460]), ADR(St0DataTemp.DataAu[1]), SIZEOF(DWORD)*10);
+
+MEMCPY(ADR(CNC.HS_write[0]), ADR(DataRequestWrite.aByte[0]), SIZEOF(BYTE));
+MEMCPY(ADR(CNC.HS_write[1]), ADR(DataRequestWrite.aByte[1]), SIZEOF(BYTE));
+MEMCPY(ADR(CNC.HS_write[9]), ADR(DataRequestWrite.aDWord), SIZEOF(DWORD));
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="MAIN">
+      <LineId Id="888" Count="8" />
+      <LineId Id="1442" Count="0" />
+      <LineId Id="1972" Count="0" />
+      <LineId Id="897" Count="0" />
+      <LineId Id="1514" Count="0" />
+      <LineId Id="1110" Count="0" />
+      <LineId Id="1697" Count="7" />
+      <LineId Id="1696" Count="0" />
+      <LineId Id="1597" Count="0" />
+      <LineId Id="1599" Count="0" />
+      <LineId Id="898" Count="2" />
+      <LineId Id="933" Count="0" />
+      <LineId Id="901" Count="1" />
+      <LineId Id="1690" Count="0" />
+      <LineId Id="1686" Count="0" />
+      <LineId Id="1193" Count="0" />
+      <LineId Id="999" Count="0" />
+      <LineId Id="998" Count="0" />
+      <LineId Id="107" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_00_Init">
+      <LineId Id="2" Count="0" />
+      <LineId Id="8" Count="2" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="14" Count="1" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_10_EC_PN_Input">
+      <LineId Id="19" Count="0" />
+      <LineId Id="96" Count="2" />
+      <LineId Id="103" Count="1" />
+      <LineId Id="99" Count="3" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="105" Count="1" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="125" Count="0" />
+      <LineId Id="163" Count="0" />
+      <LineId Id="162" Count="0" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="128" Count="1" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="165" Count="2" />
+      <LineId Id="203" Count="0" />
+      <LineId Id="201" Count="0" />
+      <LineId Id="139" Count="1" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="187" Count="1" />
+      <LineId Id="184" Count="0" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="204" Count="0" />
+      <LineId Id="124" Count="0" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="108" Count="4" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="191" Count="0" />
+      <LineId Id="190" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="196" Count="0" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="194" Count="0" />
+      <LineId Id="199" Count="0" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="195" Count="0" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="161" Count="0" />
+      <LineId Id="156" Count="1" />
+      <LineId Id="152" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_11_MatManager_Input">
+      <LineId Id="241" Count="14" />
+      <LineId Id="295" Count="1" />
+      <LineId Id="294" Count="0" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="329" Count="4" />
+      <LineId Id="344" Count="5" />
+      <LineId Id="372" Count="5" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="350" Count="2" />
+      <LineId Id="364" Count="0" />
+      <LineId Id="363" Count="0" />
+      <LineId Id="366" Count="0" />
+      <LineId Id="368" Count="2" />
+      <LineId Id="367" Count="0" />
+      <LineId Id="278" Count="1" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="280" Count="13" />
+    </LineIds>
+    <LineIds Name="MAIN.A_70_DataRequest">
+      <LineId Id="106" Count="0" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="281" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="233" Count="0" />
+      <LineId Id="119" Count="2" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="135" Count="2" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="141" Count="1" />
+      <LineId Id="149" Count="0" />
+      <LineId Id="154" Count="1" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="318" Count="1" />
+      <LineId Id="323" Count="0" />
+      <LineId Id="317" Count="0" />
+      <LineId Id="313" Count="0" />
+      <LineId Id="304" Count="0" />
+      <LineId Id="324" Count="0" />
+      <LineId Id="326" Count="0" />
+      <LineId Id="325" Count="0" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="204" Count="0" />
+      <LineId Id="203" Count="0" />
+      <LineId Id="284" Count="0" />
+      <LineId Id="232" Count="0" />
+      <LineId Id="163" Count="0" />
+      <LineId Id="267" Count="0" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="176" Count="0" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="166" Count="0" />
+      <LineId Id="179" Count="0" />
+      <LineId Id="268" Count="0" />
+      <LineId Id="181" Count="1" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="184" Count="0" />
+      <LineId Id="269" Count="0" />
+      <LineId Id="186" Count="1" />
+      <LineId Id="278" Count="0" />
+      <LineId Id="183" Count="0" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="256" Count="0" />
+      <LineId Id="191" Count="1" />
+      <LineId Id="279" Count="0" />
+      <LineId Id="188" Count="0" />
+      <LineId Id="194" Count="0" />
+      <LineId Id="261" Count="0" />
+      <LineId Id="196" Count="1" />
+      <LineId Id="280" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="334" Count="0" />
+      <LineId Id="337" Count="2" />
+      <LineId Id="335" Count="1" />
+      <LineId Id="222" Count="4" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="333" Count="0" />
+      <LineId Id="332" Count="0" />
+      <LineId Id="206" Count="2" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="285" Count="0" />
+      <LineId Id="271" Count="0" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="272" Count="2" />
+      <LineId Id="270" Count="0" />
+      <LineId Id="331" Count="0" />
+      <LineId Id="290" Count="3" />
+      <LineId Id="295" Count="0" />
+      <LineId Id="294" Count="0" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="297" Count="0" />
+      <LineId Id="283" Count="0" />
+      <LineId Id="205" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_80_OvrMng">
+      <LineId Id="24" Count="0" />
+      <LineId Id="2" Count="12" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="22" Count="1" />
+      <LineId Id="18" Count="2" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_90_EC_PN_Output">
+      <LineId Id="123" Count="0" />
+      <LineId Id="127" Count="1" />
+      <LineId Id="119" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="138" Count="0" />
+      <LineId Id="134" Count="2" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="153" Count="0" />
+      <LineId Id="149" Count="2" />
+      <LineId Id="254" Count="0" />
+      <LineId Id="155" Count="4" />
+      <LineId Id="154" Count="0" />
+      <LineId Id="255" Count="0" />
+      <LineId Id="161" Count="0" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="168" Count="3" />
+      <LineId Id="256" Count="0" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="172" Count="4" />
+      <LineId Id="257" Count="0" />
+      <LineId Id="107" Count="3" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="226" Count="0" />
+      <LineId Id="224" Count="0" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="228" Count="0" />
+      <LineId Id="227" Count="0" />
+      <LineId Id="225" Count="0" />
+      <LineId Id="190" Count="0" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="199" Count="0" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="194" Count="0" />
+      <LineId Id="253" Count="0" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="235" Count="0" />
+      <LineId Id="245" Count="0" />
+      <LineId Id="248" Count="4" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="229" Count="5" />
+      <LineId Id="185" Count="0" />
+      <LineId Id="203" Count="0" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="204" Count="0" />
+      <LineId Id="206" Count="1" />
+      <LineId Id="205" Count="0" />
+      <LineId Id="209" Count="0" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="211" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="215" Count="1" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="214" Count="0" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="217" Count="3" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="222" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="105" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_91_MatManager_Output">
+      <LineId Id="155" Count="14" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="222" Count="0" />
+      <LineId Id="224" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="75" Count="1" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="195" Count="1" />
+      <LineId Id="231" Count="1" />
+      <LineId Id="227" Count="3" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="204" Count="2" />
+      <LineId Id="203" Count="0" />
+      <LineId Id="207" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

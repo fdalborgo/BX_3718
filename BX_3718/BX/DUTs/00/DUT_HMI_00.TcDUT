@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_HMI_00" Id="{9bd688a0-da1d-465b-a4f8-743a81ceeab7}">
+    <Declaration><![CDATA[TYPE DUT_HMI_00 :
+STRUCT
+	Manuals 		: DUT_HMI_00_MANUALS;
+	EVDiagnostic 	: ARRAY[3..47] OF DUT_HMI_EV_Diagnostic;
+	EVInfo			: ARRAY[0..CNC.NUM_MAX_MANUALS_00-1] OF DUT_HMI_EV_Info;
+	Status			: USINT;
+	CycleTime		: STRING;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

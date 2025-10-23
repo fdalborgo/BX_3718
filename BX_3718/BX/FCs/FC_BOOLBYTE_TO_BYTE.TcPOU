@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FC_BOOLBYTE_TO_BYTE" Id="{eb7fbcaf-5472-4cd9-80b3-f19d50fb3601}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_BOOLBYTE_TO_BYTE : BYTE
+VAR_INPUT
+	myBool : POINTER TO BOOL;
+END_VAR
+VAR
+    i : USINT;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[FC_BOOLBYTE_TO_BYTE := 0;
+FOR i := 0 TO 7 DO
+	IF myBool[i] THEN
+    	FC_BOOLBYTE_TO_BYTE := FC_BOOLBYTE_TO_BYTE OR (SHL(1,i)) ;
+	END_IF
+END_FOR
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_BOOLBYTE_TO_BYTE">
+      <LineId Id="183" Count="4" />
+      <LineId Id="175" Count="0" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="151" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

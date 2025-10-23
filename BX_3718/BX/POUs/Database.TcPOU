@@ -1,0 +1,1244 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="Database" Id="{49f91a01-95a8-4418-a8af-d25c03f11133}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Database
+VAR
+	i : UDINT;
+	fbMSSQLCommandEvt 			: ARRAY[0..DB.MAX_NUMBER_ST] OF FB_SQLCommandEvt(sNetID := '', tTimeout := T#10S);
+	fbMSSQLStoreProcedureEvt	: ARRAY[0..DB.MAX_NUMBER_ST] OF FB_SQLStoredProcedureEvt(sNetID := '', tTimeout := T#10S);
+	tempfbMSSQLStoreProcedureEvt : ARRAY[0..DB.MAX_NUMBER_ST] OF POINTER TO FB_SQLStoredProcedureEvt; 
+	fbMSSQLResult				: ARRAY[0..DB.MAX_NUMBER_ST] OF FB_SQLResultEvt(sNetID := '', tTimeout := T#10S);
+	
+	spUpdatePartLocationsAndProcessingDataParameters		: DUT_UpdatePartLocationsAndProcessingData;
+	stParameterProcessingDataForHMI		: DUT_ProcessingDataForHMI;
+	
+	resetProcessinData						: BOOL;
+	
+	RTRIG_ProcessingDataExecute	 : R_TRIG;
+	RTRIG_ShiftManTrigger0to1	 : R_TRIG;
+	FTRIG_Running : F_TRIG;
+	RTRIG_MachineEmpty	 : R_TRIG;
+	RTRIG_ProcessingDataDoneError	: R_TRIG;
+	
+	ProcessingDataTrigger : BOOL;
+	RTRIG_LogModeStateEventExecute	: R_TRIG;
+	RTRIG_LogModeStateEventDoneOrError	: R_TRIG;
+	LogModeStateEventTrigger	: BOOL;
+	MemFirstCycle	: BOOL := FALSE;
+	TempString	: STRING;
+	SystemTimeSecStr	: STRING(2);
+	TON_DelayLogModeStateEventTrigger : TON;
+	RTRIG_GetSettingRepositoryExecute	: R_TRIG;
+	RTRIG_GetSettingRepositoryDoneError	: R_TRIG;
+	TON_MSSQL_spGetProcessingDataForHMIBusy : TON;
+	memReq : BOOL;
+	RTRIG_MesManualExecute	: R_TRIG;
+	RTRIG_MesManualDoneError	: R_TRIG;
+	myPeriod : TON;
+	RTRIG_MyExe : R_TRIG;
+	RTRIG_MyDone : R_TRIG;
+	RTRIG_MyError : R_TRIG;
+	myTime	: TIME := T#1S;
+	myStart : BOOL;
+	myVar : BOOL;
+	myEnableConnection : BOOL;
+	myConnected : ARRAY[1..5] OF BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF _TaskInfo[MAIN.fbGetCurTaskIndex.index].FirstCycle THEN
+	MemFirstCycle := TRUE;
+END_IF
+TempString := DT_TO_STRING(G.SystemTime);
+SystemTimeSecStr := RIGHT(TempString, 2);
+IF SystemTimeSecStr = '00' AND MemFirstCycle AND PRG_MSSQL_InitConnection.Connected THEN
+	TON_DelayLogModeStateEventTrigger.IN := TRUE;
+END_IF
+TON_DelayLogModeStateEventTrigger(PT := T#500MS);
+IF SystemTimeSecStr <> '00' AND LogModeStateEventTrigger AND NOT TON_DelayLogModeStateEventTrigger.IN THEN
+ 	LogModeStateEventTrigger := FALSE;
+END_IF
+IF TON_DelayLogModeStateEventTrigger.Q THEN
+	LogModeStateEventTrigger := TRUE;
+	TON_DelayLogModeStateEventTrigger.IN := FALSE;
+END_IF
+
+
+
+FOR i := 0 TO DB.MAX_NUMBER_ST DO
+	tempfbMSSQLStoreProcedureEvt[i] := ADR(fbMSSQLStoreProcedureEvt[i]);
+END_FOR
+
+A_MSSQL();
+A_MSSQL_ProcessingData();
+Test();
+
+
+
+	
+								
+	]]></ST>
+    </Implementation>
+    <Action Name="A_MSSQL" Id="{99e38e57-88cc-41f5-8a89-07c50ea66235}">
+      <Implementation>
+        <ST><![CDATA[PRG_MSSQL_InitConnection(
+						Enable			:=,
+						DBID 			:= 1, 
+						tRetryConn 	:= T#10S, 
+						pSQLCommand1 	:= ADR(fbMSSQLCommandEvt[0]),
+						pSQLCommand2 	:= ADR(fbMSSQLCommandEvt[1]),
+						pSQLCommand3 	:= ADR(fbMSSQLCommandEvt[2]),
+						pSQLCommand4 	:= ADR(fbMSSQLCommandEvt[3]),
+						pSQLStoredProcedureEvt := tempfbMSSQLStoreProcedureEvt
+						);
+						 
+PRG_MSSQL_spGetNextPartPLCData( Enable := PRG_MSSQL_InitConnection.Connected,
+								OtherSPBusy := PRG_MSSQL_UpdatePartLocationsAndProcessingData.Busy OR PRG_MSSQL_UpdatePartLocationsAndProcessingData.Execute,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[8],
+								fbSQLResult := fbMSSQLResult[8],
+								stPLCData := DB.stPLCData);
+								
+								
+PRG_MSSQL_UpdatePartLocationsAndProcessingData(	Enable := PRG_MSSQL_InitConnection.Connected,
+												fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[9],
+												fbSQLResult := fbMSSQLResult[9],
+												stProcessingData := DB.stProcessingData,
+												Parameters := spUpdatePartLocationsAndProcessingDataParameters);
+									
+PRG_MSSQL_spGetProcessingDataForHMI( Enable := PRG_MSSQL_InitConnection.Connected,
+									 Parameters := stParameterProcessingDataForHMI,
+						  			 fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[10],
+						  			 fbSQLResult := fbMSSQLResult[10],
+									 ProcessingHMIDataLocation	=> DB.ProcessingHMIDataLocation,
+									 ProcessingHMIDataViewData	=> DB.ProcessingHMIDataViewData); 
+									 
+IF G.MachineEmpty THEN
+	MEMSET(ADR(DB.ProcessingHMIDataViewData), 0, SIZEOF(DB.ProcessingHMIDataViewData));
+	MEMSET(ADR(DB.ProcessingHMIDataLocation), 0, SIZEOF(DB.ProcessingHMIDataLocation));
+ELSE
+	DB.ProcessingHMIDataLocation := PRG_MSSQL_spGetProcessingDataForHMI.ProcessingHMIDataLocation;
+	DB.ProcessingHMIDataViewData := PRG_MSSQL_spGetProcessingDataForHMI.ProcessingHMIDataViewData;	
+END_IF	
+
+PRG_MSSQL_spCMD_AbortProduction(Enable := PRG_MSSQL_InitConnection.Connected,
+						  	fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[36],
+						  	fbSQLResult := fbMSSQLResult[36]);
+
+//////////////// gestione PRG_MSSQL_spLogModeStateEvent ////////////////
+RTRIG_LogModeStateEventExecute(CLK := G.OperatingModeOld <> HMI.Out.Header.OperatingMode OR G.MachineStateOld <> HMI.Out.Header.MachineState OR LogModeStateEventTrigger);		
+RTRIG_LogModeStateEventDoneOrError(CLK := PRG_MSSQL_spLogModeStateEvent.Done OR PRG_MSSQL_spLogModeStateEvent.Error);
+IF RTRIG_LogModeStateEventExecute.Q THEN
+	PRG_MSSQL_spLogModeStateEvent.Execute := TRUE;
+END_IF	
+IF RTRIG_LogModeStateEventDoneOrError.Q THEN
+	G.OperatingModeOld := HMI.Out.Header.OperatingMode;
+	G.MachineStateOld := HMI.Out.Header.MachineState;
+	PRG_MSSQL_spLogModeStateEvent.Execute := FALSE;
+END_IF
+			
+PRG_MSSQL_spLogModeStateEvent.Parameters.EventId := -1;	
+PRG_MSSQL_spLogModeStateEvent.Parameters.EventTimeStamp := G.SystemTime;	
+PRG_MSSQL_spLogModeStateEvent.Parameters.EventType := 1;
+PRG_MSSQL_spLogModeStateEvent.Parameters.Mode := HMI.Out.Header.OperatingMode;
+PRG_MSSQL_spLogModeStateEvent.Parameters.State := HMI.Out.Header.MachineState;				
+PRG_MSSQL_spLogModeStateEvent(Enable := PRG_MSSQL_InitConnection.Connected,
+						  	fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[65],
+						  	fbSQLResult := fbMSSQLResult[65]);
+//////////////// gestione PRG_MSSQL_spLogModeStateEvent ////////////////
+
+// usato direttemente da HMI
+DB.fbGSCNextSPGetOrderInfoList(	Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+						  		fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[3],
+						  		fbSQLResult := fbMSSQLResult[3],
+								Error => DB.HMI_SP_Alarm[3].Error,
+								ErrorID => DB.HMI_SP_Alarm[3].ErrorID); 
+
+// usato direttemente da HMI			
+DB.fbGSCNextSPAppendBatchToProductionQueue(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[4],
+								fbSQLResult := fbMSSQLResult[4],
+								Error => DB.HMI_SP_Alarm[4].Error,
+								ErrorID => DB.HMI_SP_Alarm[4].ErrorID);	 	 	
+
+// usato direttemente da HMI								
+DB.fbGSCNextSPUpdateBatchToProductionQueue(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[5],
+								fbSQLResult := fbMSSQLResult[5],
+								Error => DB.HMI_SP_Alarm[5].Error,
+								ErrorID => DB.HMI_SP_Alarm[5].ErrorID); 	 
+								
+// usato direttemente da HMI								
+DB.fbGSCNextSPDeleteBatchToProductionQueue(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[6],
+								fbSQLResult := fbMSSQLResult[6],
+								Error => DB.HMI_SP_Alarm[6].Error,
+								ErrorID => DB.HMI_SP_Alarm[6].ErrorID);	 	 
+
+ // usato direttemente da HMI
+DB.fbGSCNextSPGetResourcesByType(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[14],
+								fbSQLResult := fbMSSQLResult[14],
+								Error => DB.HMI_SP_Alarm[14].Error,
+								ErrorID => DB.HMI_SP_Alarm[14].ErrorID);	 
+	 
+ // usato direttemente da HMI
+DB.fbGSCNextSPGetResourcesByName(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[15],
+								fbSQLResult := fbMSSQLResult[15],
+								Error => DB.HMI_SP_Alarm[15].Error,
+								ErrorID => DB.HMI_SP_Alarm[15].ErrorID);	 	 	
+						 		 
+ // usato direttemente da HMI
+DB.fbGSCNextSPSetResourcesByName(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[16],
+								Error => DB.HMI_SP_Alarm[16].Error,
+								ErrorID => DB.HMI_SP_Alarm[16].ErrorID);	 	 		
+
+ // usato direttemente da HMI
+DB.fbGSCNextSPGetResourcesListByType(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[17],
+								fbSQLResult := fbMSSQLResult[17],
+								Error => DB.HMI_SP_Alarm[17].Error,
+								ErrorID => DB.HMI_SP_Alarm[17].ErrorID);	 	 	
+
+ // usato direttemente da HMI
+DB.fbGSCNextSPGetFormattedTablesFromSequences(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[18],
+								fbSQLResult := fbMSSQLResult[18],
+								Error => DB.HMI_SP_Alarm[18].Error,
+								ErrorID => DB.HMI_SP_Alarm[18].ErrorID);	 	 	
+
+ // usato direttemente da HMI
+DB.fbGSCNextSPGetOriginsFromSequence(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[19],
+								fbSQLResult := fbMSSQLResult[19],
+								Error => DB.HMI_SP_Alarm[19].Error,
+								ErrorID => DB.HMI_SP_Alarm[19].ErrorID);	 	 	
+
+// usato direttemente da HMI
+DB.fbGSCNextSPGetOrigins(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[20],
+						  		fbSQLResult := fbMSSQLResult[20],
+								Error => DB.HMI_SP_Alarm[20].Error,
+								ErrorID => DB.HMI_SP_Alarm[20].ErrorID);	 	 
+											  
+// usato direttemente da HMI
+DB.fbGSCNextSPGetOriginsByName(	Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[21],
+								fbSQLResult := fbMSSQLResult[21],
+								Error => DB.HMI_SP_Alarm[21].Error,
+								ErrorID => DB.HMI_SP_Alarm[21].ErrorID);	 	 	
+								
+// usato direttemente da HMI
+DB.fbGSCNextSPGetOriginsBySide(	Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[22],
+								fbSQLResult := fbMSSQLResult[22],
+								Error => DB.HMI_SP_Alarm[22].Error,
+								ErrorID => DB.HMI_SP_Alarm[22].ErrorID); 	 	
+
+// usato direttemente da HMI
+DB.fbGSCNextSPGetCutters(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[23],
+								fbSQLResult := fbMSSQLResult[23],
+								Error => DB.HMI_SP_Alarm[23].Error,
+								ErrorID => DB.HMI_SP_Alarm[23].ErrorID);	 	 	
+
+// usato direttemente da HMI
+DB.fbGSCNextSPGetCuttersByName(	Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[24],
+								fbSQLResult := fbMSSQLResult[24],
+								Error => DB.HMI_SP_Alarm[24].Error,
+								ErrorID => DB.HMI_SP_Alarm[24].ErrorID);	 	 	
+
+// usato direttemente da HMI
+DB.fbGSCNextSPGetCuttersBySide(	Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[25],
+								fbSQLResult := fbMSSQLResult[25],
+								Error => DB.HMI_SP_Alarm[25].Error,
+								ErrorID => DB.HMI_SP_Alarm[25].ErrorID);	 	
+
+// usato direttemente da HMI
+DB.fbGSCNextSPGetMillings(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[26],
+								fbSQLResult := fbMSSQLResult[26],
+								Error => DB.HMI_SP_Alarm[26].Error,
+								ErrorID => DB.HMI_SP_Alarm[26].ErrorID);	 	 		
+
+// usato direttemente da HMI
+DB.fbGSCNextSPGetMillingsByName(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[27],
+								fbSQLResult := fbMSSQLResult[27],
+								Error => DB.HMI_SP_Alarm[27].Error,
+								ErrorID => DB.HMI_SP_Alarm[27].ErrorID); 	 	
+
+// usato direttemente da HMI
+DB.fbGSCNextSPGetMillingsByFamilyName(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[28],
+								fbSQLResult := fbMSSQLResult[28],
+								Error => DB.HMI_SP_Alarm[28].Error,
+								ErrorID => DB.HMI_SP_Alarm[28].ErrorID); 	 		
+
+// usato direttemente da HMI
+DB.fbGSCNextSPGetResourcesByNameMilling(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[29],
+								fbSQLResult := fbMSSQLResult[29],
+								Error => DB.HMI_SP_Alarm[29].Error,
+								ErrorID => DB.HMI_SP_Alarm[29].ErrorID);	 	 
+								
+// usato direttemente da HMI					  
+DB.fbGSCNextSPMES_GetOrderInfoList(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[31],
+								fbSQLResult := fbMSSQLResult[31],
+								Error => DB.HMI_SP_Alarm[31].Error,
+								ErrorID => DB.HMI_SP_Alarm[31].ErrorID);	 	 	
+
+// usato direttemente da HMI					  
+DB.fbGSCNextSPMES_GetOrderItems(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[32],
+								fbSQLResult := fbMSSQLResult[32],
+								Error => DB.HMI_SP_Alarm[32].Error,
+								ErrorID => DB.HMI_SP_Alarm[32].ErrorID);	 
+
+// usato direttemente da HMI					  
+DB.fbGSCNextSPGetOrderItems(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[33],
+								fbSQLResult := fbMSSQLResult[33],
+								Error => DB.HMI_SP_Alarm[33].Error,
+								ErrorID => DB.HMI_SP_Alarm[33].ErrorID);	 	 	
+
+// usato direttemente da HMI								
+DB.fbGSCNextSPGetBatchList[0](Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[34],
+								fbSQLResult := fbMSSQLResult[34],
+								Error => DB.HMI_SP_Alarm[34].Error,
+								ErrorID => DB.HMI_SP_Alarm[34].ErrorID);	 	
+								
+// usato direttemente da HMI								
+DB.fbGSCNextSPGetBatchList[1](Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[35],
+								fbSQLResult := fbMSSQLResult[35],
+								Error => DB.HMI_SP_Alarm[35].Error,
+								ErrorID => DB.HMI_SP_Alarm[35].ErrorID);	 	 
+
+// usato direttemente da HMI								
+DB.fbGSCNextSPGetBatchHistory(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[37],
+								fbSQLResult := fbMSSQLResult[37],
+								Error => DB.HMI_SP_Alarm[37].Error,
+								ErrorID => DB.HMI_SP_Alarm[37].ErrorID);	 	 
+
+// usato direttemente da HMI								
+DB.fbGSCNextSPGetBatchHistoryDetail(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[38],
+								fbSQLResult := fbMSSQLResult[38],
+								Error => DB.HMI_SP_Alarm[38].Error,
+								ErrorID => DB.HMI_SP_Alarm[38].ErrorID); 	 
+
+// usato direttemente da HMI									
+DB.fbGSCNextSPCMD_ForceCompletedBatch(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[39],
+								fbSQLResult := fbMSSQLResult[39],
+								Error => DB.HMI_SP_Alarm[39].Error,
+								ErrorID => DB.HMI_SP_Alarm[39].ErrorID);	 	
+
+// usato direttemente da HMI	
+DB.fbGSCNextSPCMD_HoldBatch(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[40],
+								fbSQLResult := fbMSSQLResult[40],
+								Error => DB.HMI_SP_Alarm[40].Error,
+								ErrorID => DB.HMI_SP_Alarm[40].ErrorID);	  	
+
+// usato direttemente da HMI											
+DB.fbGSCNextSPCMD_RecoverBatch(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[41],
+								fbSQLResult := fbMSSQLResult[41],
+								Error => DB.HMI_SP_Alarm[41].Error,
+								ErrorID => DB.HMI_SP_Alarm[41].ErrorID); 	  	
+
+// usato direttemente da HMI		
+DB.fbGSCNextSPCMD_RestartBatch(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[42],
+								fbSQLResult := fbMSSQLResult[42],
+								Error => DB.HMI_SP_Alarm[42].Error,
+								ErrorID => DB.HMI_SP_Alarm[42].ErrorID);	  	
+
+// usato direttemente da HMI		
+DB.fbGSCNextSPCMD_ResumeBatch(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[43],
+								fbSQLResult := fbMSSQLResult[43],
+								Error => DB.HMI_SP_Alarm[43].Error,
+								ErrorID => DB.HMI_SP_Alarm[43].ErrorID); 	
+
+// usato direttemente da HMI			
+DB.fbGSCNextSPCMD_SuspendBatch(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[44],
+								fbSQLResult := fbMSSQLResult[44],
+								Error => DB.HMI_SP_Alarm[44].Error,
+								ErrorID => DB.HMI_SP_Alarm[44].ErrorID); 	  	
+
+// usato direttemente da HMI		
+DB.fbGSCNextSPCMD_UnholdBatch(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[45],
+								fbSQLResult := fbMSSQLResult[45],
+								Error => DB.HMI_SP_Alarm[45].Error,
+								ErrorID => DB.HMI_SP_Alarm[45].ErrorID);	 	
+
+// usato direttemente da HMI	
+RTRIG_MesManualExecute(CLK := HMI.General.Mes.PS);
+RTRIG_MesManualDoneError(CLK := DB.fbGSCNextSPUpdateSettingRepositoryByName.Done OR DB.fbGSCNextSPUpdateSettingRepositoryByName.Execute);	
+IF RTRIG_MesManualExecute.Q THEN
+	DB.fbGSCNextSPUpdateSettingRepositoryByName.Name := 'MESEnabled';
+	DB.fbGSCNextSPUpdateSettingRepositoryByName.Execute := TRUE;
+	DB.fbGSCNextSPUpdateSettingRepositoryByName.JsonValue := HMI.General.Mes.Data;
+END_IF			
+IF RTRIG_MesManualDoneError.Q THEN
+	IF DB.fbGSCNextSPUpdateSettingRepositoryByName.Done THEN
+		DB.MesReadStatusCmd := TRUE;
+	END_IF
+	DB.fbGSCNextSPUpdateSettingRepositoryByName.Execute := FALSE;
+END_IF									
+DB.fbGSCNextSPUpdateSettingRepositoryByName(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[46],
+								fbSQLResult := fbMSSQLResult[46],
+								Error => DB.HMI_SP_Alarm[46].Error,
+								ErrorID => DB.HMI_SP_Alarm[46].ErrorID);
+								
+// usato direttemente da HMI								
+DB.fbGSCNextSPGetSettingRepositoryList(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[47],
+								fbSQLResult := fbMSSQLResult[47],
+								Error => DB.HMI_SP_Alarm[47].Error,
+								ErrorID => DB.HMI_SP_Alarm[47].ErrorID);	  	
+
+// usato direttemente da HMI								
+DB.fbGSCNextSPGetBatchDetailById(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[48],
+								fbSQLResult := fbMSSQLResult[48],
+								Error => DB.HMI_SP_Alarm[48].Error,
+								ErrorID => DB.HMI_SP_Alarm[48].ErrorID);  
+
+// usato direttemente da HMI								
+DB.fbGSCNextSPChangeBatchPositionInProductionQueue(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[49],
+								fbSQLResult := fbMSSQLResult[49],
+								Error => DB.HMI_SP_Alarm[49].Error,
+								ErrorID => DB.HMI_SP_Alarm[49].ErrorID);	
+
+// usato direttemente da HMI									
+DB.fbGSCNextSPGetCuttersOnDrum(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[50],
+								fbSQLResult := fbMSSQLResult[50],
+								Error => DB.HMI_SP_Alarm[50].Error,
+								ErrorID => DB.HMI_SP_Alarm[50].ErrorID);
+
+// usato direttemente da HMI	
+DB.fbGSCNextSPGetCuttersComboboxFormatted(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[51],
+								fbSQLResult := fbMSSQLResult[51],
+								Error => DB.HMI_SP_Alarm[51].Error,
+								ErrorID => DB.HMI_SP_Alarm[51].ErrorID);	 	
+								
+// usato direttemente da HMI
+DB.fbGSCNextSPUpdateCuttersOnDrum(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[52],
+								fbSQLResult := fbMSSQLResult[52],
+								Error => DB.HMI_SP_Alarm[52].Error,
+								ErrorID => DB.HMI_SP_Alarm[52].ErrorID);
+
+// usato direttemente da HMI								
+DB.fbGSCNextSPCheckCutterAlreadyPresentOnDrums(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[53],
+								fbSQLResult := fbMSSQLResult[53],
+								Error => DB.HMI_SP_Alarm[53].Error,
+								ErrorID => DB.HMI_SP_Alarm[53].ErrorID);
+								
+// usato direttemente da HMI								
+DB.fbGSCNextSPUpdateCutterData(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[54],
+								fbSQLResult := fbMSSQLResult[54],
+								Error => DB.HMI_SP_Alarm[54].Error,
+								ErrorID => DB.HMI_SP_Alarm[54].ErrorID);	
+
+// usato direttemente da HMI								
+DB.fbGSCNextSPGetProfilesByFamilyName(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[55],
+								fbSQLResult := fbMSSQLResult[55],
+								Error => DB.HMI_SP_Alarm[55].Error,
+								ErrorID => DB.HMI_SP_Alarm[55].ErrorID);	
+								
+// usato direttemente da HMI								
+DB.fbGSCNextSPGetProfiles(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[56],
+								fbSQLResult := fbMSSQLResult[56],
+								Error => DB.HMI_SP_Alarm[56].Error,
+								ErrorID => DB.HMI_SP_Alarm[56].ErrorID);
+								
+// usato direttemente da HMI
+DB.fbGSCNextSPGetFamilyNamesForCombobox(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[57],
+								fbSQLResult := fbMSSQLResult[57],
+								Error => DB.HMI_SP_Alarm[57].Error,
+								ErrorID => DB.HMI_SP_Alarm[57].ErrorID);
+								
+// usato direttemente da HMI
+DB.fbGSCNextSPGetCuttersFromFamilyName(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[58],
+								fbSQLResult := fbMSSQLResult[58],
+								Error => DB.HMI_SP_Alarm[58].Error,
+								ErrorID => DB.HMI_SP_Alarm[58].ErrorID);
+								
+// usato direttemente da HMI
+DB.fbGSCNextSPDeleteProfile(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[59],
+								fbSQLResult := fbMSSQLResult[59],
+								Error => DB.HMI_SP_Alarm[59].Error,
+								ErrorID => DB.HMI_SP_Alarm[59].ErrorID);
+								
+// usato direttemente da HMI
+DB.fbGSCNextSPAddProfile(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[60],
+								fbSQLResult := fbMSSQLResult[60],
+								Error => DB.HMI_SP_Alarm[60].Error,
+								ErrorID => DB.HMI_SP_Alarm[60].ErrorID);
+								
+// usato direttemente da HMI
+DB.fbGSCNextSPDeleteCutter(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[61],
+								fbSQLResult := fbMSSQLResult[61],
+								Error => DB.HMI_SP_Alarm[61].Error,
+								ErrorID => DB.HMI_SP_Alarm[61].ErrorID);
+								
+// usato direttemente da HMI
+DB.fbGSCNextSPAddCutter(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[62],
+								fbSQLResult := fbMSSQLResult[62],
+								Error => DB.HMI_SP_Alarm[62].Error,
+								ErrorID => DB.HMI_SP_Alarm[62].ErrorID);
+								
+// usato direttemente da HMI
+DB.fbGSCNextSPGetBroachingProfileSettings(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[63],
+								fbSQLResult := fbMSSQLResult[63],
+								Error => DB.HMI_SP_Alarm[63].Error,
+								ErrorID => DB.HMI_SP_Alarm[63].ErrorID);
+
+// usato direttemente da HMI								
+DB.fbGSCNextSPUpdateBroachingProfileSettings(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[64],
+								fbSQLResult := fbMSSQLResult[64],
+								Error => DB.HMI_SP_Alarm[64].Error,
+								ErrorID => DB.HMI_SP_Alarm[64].ErrorID);	 
+							
+// fbMSSQLStoreProcedureEvt[65] usato da plc, vedi in alto
+
+// usato direttemente da HMI	
+RTRIG_GetSettingRepositoryExecute(CLK := DB.MesReadStatusCmd);	
+RTRIG_GetSettingRepositoryDoneError(CLK := DB.fbGSCNextSPGetSettingRepositoryByName.Done OR DB.fbGSCNextSPGetSettingRepositoryByName.Error);	
+IF RTRIG_GetSettingRepositoryExecute.Q THEN
+	DB.fbGSCNextSPGetSettingRepositoryByName.Name := 'MESEnabled';
+	DB.fbGSCNextSPGetSettingRepositoryByName.Execute := TRUE;
+END_IF 
+IF RTRIG_GetSettingRepositoryDoneError.Q THEN
+	IF DB.fbGSCNextSPGetSettingRepositoryByName.Done THEN
+		HMI.General.Mes.LS := DB.fbGSCNextSPGetSettingRepositoryByName.Data;
+	END_IF	
+	DB.MesReadStatusCmd := FALSE;
+	DB.fbGSCNextSPGetSettingRepositoryByName.Execute := FALSE;
+END_IF 				
+DB.fbGSCNextSPGetSettingRepositoryByName(Enable := PRG_MSSQL_InitConnection.Connected,
+								Reset := G.ResetButton,
+								fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[66],
+								fbSQLResult := fbMSSQLResult[66],
+								Error => DB.HMI_SP_Alarm[66].Error,
+								ErrorID => DB.HMI_SP_Alarm[66].ErrorID);]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_MSSQL_ProcessingData" Id="{6098b8d8-e4d6-493a-aa17-2868d9a6fe98}">
+      <Implementation>
+        <ST><![CDATA[IF NOT G.fbProcessingData[1].UnloadingStation THEN
+	G.PMCShiftDataSlide := HMI.ShiftData[1];
+END_IF
+IF NOT G.fbProcessingData[2].UnloadingStation THEN
+	G.PMCShiftDataLaser := HMI.ShiftData[2];
+END_IF
+IF NOT G.fbProcessingData[5].UnloadingStation THEN
+	G.PMCShiftDataCart := HMI.ShiftData[5];
+END_IF
+IF NOT G.fbProcessingData[8].UnloadingStation THEN
+	G.PMCShiftDataDeburring := HMI.ShiftData[8];
+END_IF
+IF NOT G.fbProcessingData[9].UnloadingStation THEN
+	G.PMCShiftDataPallet := HMI.ShiftData[9];
+END_IF
+IF NOT G.fbProcessingData[14].UnloadingStation THEN
+	G.PMCShiftDataPallet := HMI.ShiftData[14];
+END_IF
+
+G.fbProcessingData[0](PMCShiftManData  := HMI.ShiftData[0],
+					NumStation		 := 0, 
+					FirstStation	 := TRUE,
+					StationOne		 := FALSE,
+					UnloadingStation := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					stProcessingData => (*DB.stProcessingData[0]*));
+
+G.fbProcessingData[1](PMCShiftManData  := G.PMCShiftDataSlide,
+					NumStation		 := 1, 
+					FirstStation	 := FALSE,
+					StationOne		 := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					ProductStatus 	 := FC_ProductStatus(G.PMCShiftDataSlide.FLAGP),
+					stProcessingData => (*DB.stProcessingData[1]*));
+					
+G.fbProcessingData[2](PMCShiftManData  := G.PMCShiftDataLaser,
+					NumStation		 := 2, 
+					FirstStation	 := FALSE,
+					StationOne		 := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					ProductStatus 	 := FC_ProductStatus(G.PMCShiftDataLaser.FLAGP),
+					stProcessingData => (*DB.stProcessingData[2]*));
+					
+G.fbProcessingData[3](PMCShiftManData  := HMI.ShiftData[3],
+					NumStation		 := 3, 
+					FirstStation	 := FALSE,
+					StationOne		 := FALSE,
+					UnloadingStation := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					ProductStatus 	 := FC_ProductStatus(HMI.ShiftData[3].FLAGP),
+					stProcessingData => (*DB.stProcessingData[3]*));
+					
+G.fbProcessingData[4](PMCShiftManData  := HMI.ShiftData[4],
+					NumStation		 := 4, 
+					FirstStation	 := FALSE,
+					StationOne		 := FALSE,
+					UnloadingStation := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					ProductStatus 	 := FC_ProductStatus(HMI.ShiftData[4].FLAGP),
+					stProcessingData => (*DB.stProcessingData[4]*));
+					
+G.fbProcessingData[5](PMCShiftManData  := G.PMCShiftDataCart,
+					NumStation		 := 5, 
+					FirstStation	 := FALSE,
+					StationOne		 := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					ProductStatus 	 := FC_ProductStatus(G.PMCShiftDataCart.FLAGP),
+					stProcessingData => (*DB.stProcessingData[5]*));
+					
+G.fbProcessingData[6](PMCShiftManData  := HMI.ShiftData[6],
+					NumStation		 := 6, 
+					FirstStation	 := FALSE,
+					StationOne		 := FALSE,
+					UnloadingStation := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					ProductStatus 	 := FC_ProductStatus(HMI.ShiftData[6].FLAGP),
+					stProcessingData => (*DB.stProcessingData[6]*));
+					
+G.fbProcessingData[7](PMCShiftManData  := HMI.ShiftData[7],
+					NumStation		 := 7, 
+					FirstStation	 := FALSE,
+					StationOne		 := FALSE,
+					UnloadingStation := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					ProductStatus 	 := FC_ProductStatus(HMI.ShiftData[7].FLAGP),
+					stProcessingData => (*DB.stProcessingData[7]*));
+
+G.fbProcessingData[8](PMCShiftManData  := G.PMCShiftDataDeburring,
+					NumStation		 := 8, 
+					FirstStation	 := FALSE,
+					StationOne		 := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					ProductStatus 	 := FC_ProductStatus(G.PMCShiftDataDeburring.FLAGP),
+					stProcessingData => (*DB.stProcessingData[8]*));
+					
+G.fbProcessingData[9](PMCShiftManData  := G.PMCShiftDataPallet,
+					NumStation		 := 9, 
+					FirstStation	 := FALSE,
+					StationOne		 := FALSE,
+					Trigger			 := ProcessingDataTrigger,
+					ProductStatus 	 := FC_ProductStatus(G.PMCShiftDataPallet.FLAGP),
+					stProcessingData => (*DB.stProcessingData[9]*));
+
+DB.fbTriggerSequencer(Delay := T#100ms);					
+RTRIG_MachineEmpty(CLK := G.MachineEmpty);
+FTRIG_Running(CLK := HMI.Out.Header.MachineState = eState.Running);
+RTRIG_ShiftManTrigger0to1(CLK := G.MachineEmpty AND HMI.ShiftData[0].WIDP > 0);
+RTRIG_ProcessingDataExecute(CLK := (DB.fbTriggerSequencer.Out (*OR RTRIG_ShiftManTrigger0to1.Q OR RTRIG_MachineEmpty.Q*) OR FTRIG_Running.Q) AND NOT PRG_MSSQL_UpdatePartLocationsAndProcessingData.Busy);
+
+	
+IF RTRIG_ProcessingDataExecute.Q THEN
+	ProcessingDataTrigger := TRUE;
+END_IF
+		
+TON_MSSQL_spGetProcessingDataForHMIBusy(IN := NOT PRG_MSSQL_spGetProcessingDataForHMI.Busy AND NOT PRG_MSSQL_spGetProcessingDataForHMI.Execute, PT := T#100MS);		
+IF (ProcessingDataTrigger (*AND TON_MSSQL_spGetProcessingDataForHMIBusy.Q*)) (*OR memReq*) THEN
+	FOR i := 0 TO CNC.NUM_STATIONS DO
+		DB.stProcessingData[i] := G.fbProcessingData[i].stProcessingData;
+	END_FOR
+	PRG_MSSQL_UpdatePartLocationsAndProcessingData.Execute := TRUE;
+	ProcessingDataTrigger := FALSE;
+END_IF
+
+IF ProcessingDataTrigger AND NOT TON_MSSQL_spGetProcessingDataForHMIBusy.Q AND NOT memReq THEN
+	memReq := TRUE;
+END_IF
+
+IF PRG_MSSQL_UpdatePartLocationsAndProcessingData.Execute AND memReq THEN
+	memReq := FALSE;
+END_IF
+			
+
+RTRIG_ProcessingDataDoneError(CLK := PRG_MSSQL_UpdatePartLocationsAndProcessingData.Done OR PRG_MSSQL_UpdatePartLocationsAndProcessingData.Error, Q => DB.fbTriggerSequencer.Reset);
+IF RTRIG_ProcessingDataDoneError.Q THEN
+	PRG_MSSQL_UpdatePartLocationsAndProcessingData.Execute := FALSE;
+	G.fbProcessingData[1].UnloadingStation := FALSE;
+	G.fbProcessingData[2].UnloadingStation := FALSE;
+	G.fbProcessingData[5].UnloadingStation := FALSE;
+	G.fbProcessingData[8].UnloadingStation := FALSE;
+	G.fbProcessingData[9].UnloadingStation := FALSE;
+	G.fbProcessingData[14].UnloadingStation := FALSE;
+	G.UpdatePartLocationsAndProcessingDataTrigger := FALSE;
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Test" Id="{f845fded-4484-43b9-84ba-c033113d6201}">
+      <Implementation>
+        <ST><![CDATA[PRG_MSSQL_InitConnection_MyTest1(
+						Enable			:= myEnableConnection,
+						DBID 			:= 1, 
+						tRetryConn 	:= T#10S, 
+						pSQLStoredProcedureEvt := ADR(fbMSSQLStoreProcedureEvt[67]),
+						Connected => myConnected[1]
+						);
+						
+PRG_MSSQL_InitConnection_MyTest2(
+						Enable			:= myEnableConnection,
+						DBID 			:= 1, 
+						tRetryConn 	:= T#10S, 
+						pSQLStoredProcedureEvt := ADR(fbMSSQLStoreProcedureEvt[68]),
+						Connected => myConnected[2]
+						);
+						
+PRG_MSSQL_InitConnection_MyTest3(
+						Enable			:= myEnableConnection,
+						DBID 			:= 1, 
+						tRetryConn 	:= T#10S, 
+						pSQLStoredProcedureEvt := ADR(fbMSSQLStoreProcedureEvt[69]),
+						Connected => myConnected[3]
+						);
+						
+PRG_MSSQL_InitConnection_MyTest4(
+						Enable			:= myEnableConnection,
+						DBID 			:= 1, 
+						tRetryConn 	:= T#10S, 
+						pSQLStoredProcedureEvt := ADR(fbMSSQLStoreProcedureEvt[70]),
+						Connected => myConnected[4]
+						);
+						
+PRG_MSSQL_InitConnection_MyTest5(
+						Enable			:= myEnableConnection,
+						DBID 			:= 1, 
+						tRetryConn 	:= T#10S, 
+						pSQLStoredProcedureEvt := ADR(fbMSSQLStoreProcedureEvt[71]),
+						Connected => myConnected[5]
+						);
+
+myPeriod(IN:=myStart AND myVar, PT := myTime); 	
+RTRIG_MyExe(CLK := myPeriod.Q);
+RTRIG_MyDone(CLK := PRG_MSSQL_spMyTest.Done);
+RTRIG_MyError(CLK := PRG_MSSQL_spMyTest.Error);
+IF RTRIG_MyExe.Q AND NOT PRG_MSSQL_spMyTest.Busy THEN
+	PRG_MSSQL_spMyTest.Execute := TRUE;
+	myVar := FALSE;
+END_IF
+IF RTRIG_MyDone.Q THEN
+	PRG_MSSQL_spMyTest.Execute := FALSE;
+	myVar := TRUE;
+END_IF
+IF RTRIG_MyError.Q THEN
+	PRG_MSSQL_spMyTest.Execute := FALSE;
+	myVar := FALSE;	
+	myStart := FALSE;
+END_IF
+			
+PRG_MSSQL_spMyTest(	Enable := PRG_MSSQL_InitConnection.Connected,
+					fbSQLStoredProcedure := fbMSSQLStoreProcedureEvt[67],
+					fbSQLResult := fbMSSQLResult[67],
+					fbSQLStoredProcedure1 := fbMSSQLStoreProcedureEvt[68],
+					fbSQLResult1 := fbMSSQLResult[68],
+					fbSQLStoredProcedure2 := fbMSSQLStoreProcedureEvt[69],
+					fbSQLResult2 := fbMSSQLResult[69],
+					fbSQLStoredProcedure3 := fbMSSQLStoreProcedureEvt[70],
+					fbSQLResult3 := fbMSSQLResult[70],
+					fbSQLStoredProcedure4 := fbMSSQLStoreProcedureEvt[71],
+					fbSQLResult4 := fbMSSQLResult[71]
+);]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="Database">
+      <LineId Id="496" Count="2" />
+      <LineId Id="518" Count="3" />
+      <LineId Id="517" Count="0" />
+      <LineId Id="528" Count="0" />
+      <LineId Id="534" Count="1" />
+      <LineId Id="533" Count="0" />
+      <LineId Id="529" Count="1" />
+      <LineId Id="532" Count="0" />
+      <LineId Id="531" Count="0" />
+      <LineId Id="527" Count="0" />
+      <LineId Id="526" Count="0" />
+      <LineId Id="499" Count="6" />
+      <LineId Id="578" Count="0" />
+      <LineId Id="512" Count="4" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="Database.A_MSSQL">
+      <LineId Id="2" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="3" Count="5" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="227" Count="1" />
+      <LineId Id="909" Count="0" />
+      <LineId Id="229" Count="2" />
+      <LineId Id="233" Count="8" />
+      <LineId Id="243" Count="7" />
+      <LineId Id="325" Count="0" />
+      <LineId Id="327" Count="5" />
+      <LineId Id="326" Count="0" />
+      <LineId Id="454" Count="0" />
+      <LineId Id="765" Count="0" />
+      <LineId Id="721" Count="0" />
+      <LineId Id="724" Count="0" />
+      <LineId Id="728" Count="1" />
+      <LineId Id="732" Count="0" />
+      <LineId Id="731" Count="0" />
+      <LineId Id="739" Count="0" />
+      <LineId Id="760" Count="0" />
+      <LineId Id="753" Count="0" />
+      <LineId Id="742" Count="1" />
+      <LineId Id="741" Count="0" />
+      <LineId Id="764" Count="0" />
+      <LineId Id="708" Count="0" />
+      <LineId Id="714" Count="0" />
+      <LineId Id="782" Count="0" />
+      <LineId Id="781" Count="0" />
+      <LineId Id="710" Count="1" />
+      <LineId Id="709" Count="0" />
+      <LineId Id="766" Count="0" />
+      <LineId Id="456" Count="0" />
+      <LineId Id="453" Count="0" />
+      <LineId Id="260" Count="0" />
+      <LineId Id="839" Count="0" />
+      <LineId Id="440" Count="1" />
+      <LineId Id="601" Count="1" />
+      <LineId Id="442" Count="2" />
+      <LineId Id="840" Count="0" />
+      <LineId Id="445" Count="0" />
+      <LineId Id="603" Count="1" />
+      <LineId Id="446" Count="2" />
+      <LineId Id="439" Count="0" />
+      <LineId Id="841" Count="0" />
+      <LineId Id="430" Count="0" />
+      <LineId Id="605" Count="1" />
+      <LineId Id="431" Count="3" />
+      <LineId Id="842" Count="0" />
+      <LineId Id="435" Count="0" />
+      <LineId Id="607" Count="1" />
+      <LineId Id="436" Count="2" />
+      <LineId Id="429" Count="0" />
+      <LineId Id="843" Count="0" />
+      <LineId Id="345" Count="0" />
+      <LineId Id="609" Count="1" />
+      <LineId Id="346" Count="0" />
+      <LineId Id="810" Count="0" />
+      <LineId Id="347" Count="1" />
+      <LineId Id="844" Count="0" />
+      <LineId Id="349" Count="0" />
+      <LineId Id="611" Count="1" />
+      <LineId Id="350" Count="1" />
+      <LineId Id="353" Count="0" />
+      <LineId Id="339" Count="0" />
+      <LineId Id="845" Count="0" />
+      <LineId Id="613" Count="1" />
+      <LineId Id="270" Count="3" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="274" Count="0" />
+      <LineId Id="615" Count="1" />
+      <LineId Id="275" Count="3" />
+      <LineId Id="847" Count="0" />
+      <LineId Id="279" Count="0" />
+      <LineId Id="617" Count="1" />
+      <LineId Id="280" Count="3" />
+      <LineId Id="848" Count="0" />
+      <LineId Id="284" Count="0" />
+      <LineId Id="619" Count="1" />
+      <LineId Id="285" Count="3" />
+      <LineId Id="849" Count="0" />
+      <LineId Id="289" Count="0" />
+      <LineId Id="621" Count="1" />
+      <LineId Id="290" Count="3" />
+      <LineId Id="852" Count="0" />
+      <LineId Id="294" Count="0" />
+      <LineId Id="623" Count="1" />
+      <LineId Id="295" Count="3" />
+      <LineId Id="853" Count="0" />
+      <LineId Id="301" Count="0" />
+      <LineId Id="625" Count="1" />
+      <LineId Id="302" Count="3" />
+      <LineId Id="854" Count="0" />
+      <LineId Id="306" Count="0" />
+      <LineId Id="627" Count="1" />
+      <LineId Id="307" Count="3" />
+      <LineId Id="855" Count="0" />
+      <LineId Id="311" Count="0" />
+      <LineId Id="629" Count="1" />
+      <LineId Id="312" Count="3" />
+      <LineId Id="856" Count="0" />
+      <LineId Id="316" Count="0" />
+      <LineId Id="631" Count="1" />
+      <LineId Id="317" Count="3" />
+      <LineId Id="857" Count="0" />
+      <LineId Id="321" Count="0" />
+      <LineId Id="633" Count="1" />
+      <LineId Id="322" Count="2" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="858" Count="0" />
+      <LineId Id="355" Count="0" />
+      <LineId Id="635" Count="1" />
+      <LineId Id="356" Count="2" />
+      <LineId Id="354" Count="0" />
+      <LineId Id="859" Count="0" />
+      <LineId Id="360" Count="0" />
+      <LineId Id="637" Count="1" />
+      <LineId Id="361" Count="2" />
+      <LineId Id="359" Count="0" />
+      <LineId Id="860" Count="0" />
+      <LineId Id="365" Count="0" />
+      <LineId Id="639" Count="1" />
+      <LineId Id="366" Count="2" />
+      <LineId Id="364" Count="0" />
+      <LineId Id="861" Count="0" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="641" Count="1" />
+      <LineId Id="387" Count="2" />
+      <LineId Id="386" Count="0" />
+      <LineId Id="862" Count="0" />
+      <LineId Id="391" Count="0" />
+      <LineId Id="643" Count="1" />
+      <LineId Id="392" Count="2" />
+      <LineId Id="390" Count="0" />
+      <LineId Id="863" Count="0" />
+      <LineId Id="398" Count="0" />
+      <LineId Id="645" Count="1" />
+      <LineId Id="399" Count="2" />
+      <LineId Id="396" Count="0" />
+      <LineId Id="864" Count="0" />
+      <LineId Id="406" Count="0" />
+      <LineId Id="647" Count="1" />
+      <LineId Id="404" Count="0" />
+      <LineId Id="407" Count="1" />
+      <LineId Id="405" Count="0" />
+      <LineId Id="865" Count="0" />
+      <LineId Id="409" Count="0" />
+      <LineId Id="649" Count="1" />
+      <LineId Id="411" Count="2" />
+      <LineId Id="410" Count="0" />
+      <LineId Id="866" Count="0" />
+      <LineId Id="461" Count="0" />
+      <LineId Id="651" Count="1" />
+      <LineId Id="457" Count="0" />
+      <LineId Id="459" Count="1" />
+      <LineId Id="458" Count="0" />
+      <LineId Id="867" Count="0" />
+      <LineId Id="466" Count="0" />
+      <LineId Id="653" Count="1" />
+      <LineId Id="462" Count="0" />
+      <LineId Id="464" Count="1" />
+      <LineId Id="463" Count="0" />
+      <LineId Id="868" Count="0" />
+      <LineId Id="474" Count="0" />
+      <LineId Id="655" Count="1" />
+      <LineId Id="467" Count="0" />
+      <LineId Id="489" Count="1" />
+      <LineId Id="468" Count="0" />
+      <LineId Id="869" Count="0" />
+      <LineId Id="482" Count="0" />
+      <LineId Id="657" Count="1" />
+      <LineId Id="475" Count="0" />
+      <LineId Id="491" Count="1" />
+      <LineId Id="414" Count="0" />
+      <LineId Id="870" Count="0" />
+      <LineId Id="483" Count="0" />
+      <LineId Id="659" Count="1" />
+      <LineId Id="477" Count="0" />
+      <LineId Id="493" Count="1" />
+      <LineId Id="469" Count="0" />
+      <LineId Id="871" Count="0" />
+      <LineId Id="484" Count="0" />
+      <LineId Id="661" Count="1" />
+      <LineId Id="478" Count="0" />
+      <LineId Id="495" Count="1" />
+      <LineId Id="470" Count="0" />
+      <LineId Id="872" Count="0" />
+      <LineId Id="485" Count="0" />
+      <LineId Id="663" Count="1" />
+      <LineId Id="479" Count="0" />
+      <LineId Id="497" Count="1" />
+      <LineId Id="471" Count="0" />
+      <LineId Id="873" Count="0" />
+      <LineId Id="486" Count="0" />
+      <LineId Id="665" Count="1" />
+      <LineId Id="480" Count="0" />
+      <LineId Id="499" Count="1" />
+      <LineId Id="472" Count="0" />
+      <LineId Id="874" Count="0" />
+      <LineId Id="487" Count="0" />
+      <LineId Id="667" Count="1" />
+      <LineId Id="481" Count="0" />
+      <LineId Id="838" Count="0" />
+      <LineId Id="896" Count="12" />
+      <LineId Id="502" Count="0" />
+      <LineId Id="473" Count="0" />
+      <LineId Id="875" Count="0" />
+      <LineId Id="508" Count="0" />
+      <LineId Id="669" Count="1" />
+      <LineId Id="503" Count="0" />
+      <LineId Id="509" Count="0" />
+      <LineId Id="507" Count="0" />
+      <LineId Id="505" Count="0" />
+      <LineId Id="876" Count="0" />
+      <LineId Id="510" Count="0" />
+      <LineId Id="671" Count="1" />
+      <LineId Id="511" Count="2" />
+      <LineId Id="488" Count="0" />
+      <LineId Id="877" Count="0" />
+      <LineId Id="515" Count="0" />
+      <LineId Id="673" Count="1" />
+      <LineId Id="516" Count="3" />
+      <LineId Id="878" Count="0" />
+      <LineId Id="521" Count="0" />
+      <LineId Id="675" Count="1" />
+      <LineId Id="522" Count="0" />
+      <LineId Id="526" Count="0" />
+      <LineId Id="523" Count="0" />
+      <LineId Id="529" Count="0" />
+      <LineId Id="879" Count="0" />
+      <LineId Id="530" Count="0" />
+      <LineId Id="677" Count="1" />
+      <LineId Id="524" Count="0" />
+      <LineId Id="528" Count="0" />
+      <LineId Id="527" Count="0" />
+      <LineId Id="531" Count="0" />
+      <LineId Id="880" Count="0" />
+      <LineId Id="532" Count="0" />
+      <LineId Id="679" Count="1" />
+      <LineId Id="525" Count="0" />
+      <LineId Id="533" Count="0" />
+      <LineId Id="535" Count="1" />
+      <LineId Id="881" Count="0" />
+      <LineId Id="537" Count="0" />
+      <LineId Id="681" Count="1" />
+      <LineId Id="534" Count="0" />
+      <LineId Id="540" Count="0" />
+      <LineId Id="538" Count="0" />
+      <LineId Id="541" Count="0" />
+      <LineId Id="882" Count="0" />
+      <LineId Id="542" Count="0" />
+      <LineId Id="683" Count="1" />
+      <LineId Id="539" Count="0" />
+      <LineId Id="543" Count="0" />
+      <LineId Id="545" Count="1" />
+      <LineId Id="883" Count="0" />
+      <LineId Id="547" Count="0" />
+      <LineId Id="685" Count="1" />
+      <LineId Id="544" Count="0" />
+      <LineId Id="549" Count="2" />
+      <LineId Id="884" Count="0" />
+      <LineId Id="552" Count="0" />
+      <LineId Id="687" Count="1" />
+      <LineId Id="548" Count="0" />
+      <LineId Id="553" Count="0" />
+      <LineId Id="555" Count="1" />
+      <LineId Id="885" Count="0" />
+      <LineId Id="557" Count="0" />
+      <LineId Id="689" Count="1" />
+      <LineId Id="554" Count="0" />
+      <LineId Id="558" Count="0" />
+      <LineId Id="560" Count="1" />
+      <LineId Id="886" Count="0" />
+      <LineId Id="562" Count="0" />
+      <LineId Id="692" Count="1" />
+      <LineId Id="559" Count="0" />
+      <LineId Id="563" Count="0" />
+      <LineId Id="565" Count="1" />
+      <LineId Id="887" Count="0" />
+      <LineId Id="567" Count="0" />
+      <LineId Id="694" Count="1" />
+      <LineId Id="564" Count="0" />
+      <LineId Id="568" Count="0" />
+      <LineId Id="572" Count="1" />
+      <LineId Id="888" Count="0" />
+      <LineId Id="574" Count="0" />
+      <LineId Id="696" Count="1" />
+      <LineId Id="570" Count="0" />
+      <LineId Id="575" Count="0" />
+      <LineId Id="577" Count="1" />
+      <LineId Id="889" Count="0" />
+      <LineId Id="579" Count="0" />
+      <LineId Id="698" Count="1" />
+      <LineId Id="576" Count="0" />
+      <LineId Id="581" Count="2" />
+      <LineId Id="890" Count="0" />
+      <LineId Id="584" Count="0" />
+      <LineId Id="700" Count="1" />
+      <LineId Id="580" Count="0" />
+      <LineId Id="586" Count="2" />
+      <LineId Id="891" Count="0" />
+      <LineId Id="589" Count="0" />
+      <LineId Id="702" Count="1" />
+      <LineId Id="585" Count="0" />
+      <LineId Id="590" Count="0" />
+      <LineId Id="593" Count="1" />
+      <LineId Id="892" Count="0" />
+      <LineId Id="595" Count="0" />
+      <LineId Id="704" Count="1" />
+      <LineId Id="592" Count="0" />
+      <LineId Id="600" Count="0" />
+      <LineId Id="596" Count="0" />
+      <LineId Id="598" Count="0" />
+      <LineId Id="893" Count="0" />
+      <LineId Id="599" Count="0" />
+      <LineId Id="706" Count="1" />
+      <LineId Id="597" Count="0" />
+      <LineId Id="767" Count="1" />
+      <LineId Id="786" Count="15" />
+      <LineId Id="895" Count="0" />
+      <LineId Id="802" Count="2" />
+      <LineId Id="785" Count="0" />
+    </LineIds>
+    <LineIds Name="Database.A_MSSQL_ProcessingData">
+      <LineId Id="97" Count="2" />
+      <LineId Id="109" Count="2" />
+      <LineId Id="113" Count="2" />
+      <LineId Id="117" Count="2" />
+      <LineId Id="121" Count="2" />
+      <LineId Id="222" Count="1" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="82" Count="6" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="2" Count="3" />
+      <LineId Id="7" Count="7" />
+      <LineId Id="16" Count="7" />
+      <LineId Id="166" Count="0" />
+      <LineId Id="25" Count="16" />
+      <LineId Id="43" Count="7" />
+      <LineId Id="167" Count="0" />
+      <LineId Id="52" Count="7" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="61" Count="7" />
+      <LineId Id="70" Count="2" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="159" Count="5" />
+      <LineId Id="182" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="152" Count="3" />
+      <LineId Id="207" Count="0" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="204" Count="2" />
+      <LineId Id="203" Count="0" />
+      <LineId Id="209" Count="0" />
+      <LineId Id="133" Count="4" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="211" Count="7" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="140" Count="2" />
+      <LineId Id="144" Count="5" />
+      <LineId Id="220" Count="0" />
+      <LineId Id="219" Count="0" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="202" Count="0" />
+    </LineIds>
+    <LineIds Name="Database.Test">
+      <LineId Id="48" Count="4" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="55" Count="4" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="62" Count="4" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="69" Count="4" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="76" Count="4" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="4" Count="27" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

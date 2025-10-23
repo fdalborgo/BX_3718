@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_RobSetpoint_Real" Id="{40f7fcf6-0c1b-4615-90af-ab1f37f1c5c1}">
+    <Declaration><![CDATA[TYPE DUT_RobSetpoint_Real :
+STRUCT
+	Override : USINT;
+	PositionOffset : ARRAY[0..EC.NUM_ROBOT_OFFSET - 1] OF DUT_XYZ_Real;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

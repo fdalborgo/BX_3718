@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_GetSettingRepositoryByName" Id="{ab5b1964-9626-491c-8e52-579ae5a93535}">
+    <Declaration><![CDATA[TYPE DUT_GetSettingRepositoryByName:
+STRUCT  
+	Name		: STRING(50);
+	Data		: STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,460 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FB_FindAllPartProgram" Id="{b08a44ff-7733-4cd1-a1dc-439b13a1af88}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_FindAllPartProgram 
+VAR_INPUT
+	Execute 	: BOOL;
+	sNetId		: STRING;
+	sPathName	: STRING;
+	StopAtEqual	: BOOL;
+	NameToStop	: STRING;
+END_VAR
+VAR_OUTPUT
+	Busy : BOOL;
+	Done : BOOL;
+	Error : BOOL;
+	ErrorID : DINT;
+	ErrorSubID : UDINT;
+	filesList   : ARRAY[0..99] OF STRING;
+	filesNumb	: UINT;
+END_VAR
+VAR
+	iState : DINT := -1;
+	fbEnum : FB_EnumFindFileEntry;
+	RTRIG_Execute : R_TRIG;
+	TON_Timeout		: TON;
+	FirstChar		: STRING;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TON_Timeout(IN := Busy, PT := T#20S);
+IF TON_Timeout.Q THEN
+	fbEnum.eCmd := eEnumCmd_Abort;
+	fbEnum.bExecute := TRUE;
+	
+	iState := 1999;
+END_IF
+
+RTRIG_Execute(CLK := Execute);
+IF(RTRIG_Execute.Q) THEN
+	Done := FALSE;
+	Busy := TRUE;
+	fbEnum.eCmd := eEnumCmd_First;
+	ErrorID := 0;
+	filesNumb := 0;
+	MEMSET(ADR(filesList), 0, SIZEOF(filesList));
+	ErrorID := 0;
+	ErrorSubID := 0;
+	
+	iState := 0;
+ELSIF NOT Execute AND NOT Busy THEN
+	Busy			:= FALSE;
+	Done			:= FALSE;
+	Error			:= FALSE;
+	
+	iState := -1;
+END_IF
+
+
+CASE iState OF
+	-1:
+		;
+	0:
+		fbEnum.bExecute := TRUE;
+		
+		iState := 10;
+		
+	10:
+		IF NOT fbEnum.bBusy THEN
+            IF NOT fbEnum.bError THEN
+				FirstChar := LEFT(fbEnum.stFindFile.sFileName, 1);
+				IF FirstChar = 'O' THEN
+					filesList[filesNumb] := fbEnum.stFindFile.sFileName;
+					IF StopAtEqual AND NameToStop = filesList[filesNumb] THEN
+						fbEnum.bExecute := FALSE;
+					
+                    	iState      := 999;
+						RETURN;						
+					END_IF
+					filesNumb := filesNumb + 1;
+				END_IF
+                IF NOT fbEnum.bEOE AND filesNumb <= 99 THEN
+                    fbEnum.eCmd := eEnumCmd_Next; (* enum next entry *)
+					fbEnum.bExecute := FALSE;
+					
+                    iState      := 0;
+                ELSE (* no more entries *)
+					fbEnum.bExecute := FALSE;
+					
+                    iState      := 999;
+                END_IF
+            ELSE (* log error *)
+				ErrorSubID := fbEnum.nErrID;
+				fbEnum.bExecute := FALSE;	
+			
+                iState     := 1010;
+            END_IF
+        END_IF
+		
+	999:
+		Busy := FALSE;
+		Done := TRUE;
+
+		
+END_CASE
+
+IF(iState > 1000) THEN
+	fbEnum.bExecute := FALSE;
+	Error 	:= TRUE;
+	ErrorID := iState;
+	Busy 	:= FALSE;
+ELSE
+	Error := FALSE;
+END_IF
+
+A_Call();]]></ST>
+    </Implementation>
+    <Action Name="A_Call" Id="{b8a55894-b7b8-4454-b6cb-118f1a305209}">
+      <Implementation>
+        <NWL>
+          <XmlArchive>
+            <Data>
+              <o xml:space="preserve" t="NWLImplementationObject">
+                <v n="NetworkListComment">""</v>
+                <v n="DefaultViewMode">"Fbd"</v>
+                <l2 n="NetworkList" cet="Network">
+                  <o>
+                    <v n="ILActive">false</v>
+                    <v n="FBDValid">false</v>
+                    <v n="ILValid">false</v>
+                    <l2 n="ILLines" />
+                    <v n="Comment">""</v>
+                    <v n="Title">""</v>
+                    <v n="Label">""</v>
+                    <v n="OutCommented">false</v>
+                    <l2 n="NetworkItems" cet="BoxTreeBox">
+                      <o>
+                        <v n="BoxType">"FB_EnumFindFileEntry"</v>
+                        <o n="Instance" t="Operand">
+                          <v n="Operand">"fbEnum"</v>
+                          <v n="Type">"FB_EnumFindFileEntry"</v>
+                          <v n="Comment">""</v>
+                          <v n="SymbolComment">""</v>
+                          <v n="Address">""</v>
+                          <o n="Flags" t="Flags">
+                            <v n="Flags">0</v>
+                            <v n="Fixed">false</v>
+                            <v n="Extensible">false</v>
+                          </o>
+                          <v n="LValue">false</v>
+                          <v n="Boolean">false</v>
+                          <v n="IsInstance">true</v>
+                          <v n="Id">66L</v>
+                        </o>
+                        <o n="OutputItems" t="OutputItemList">
+                          <l2 n="OutputItems" cet="Operand">
+                            <n />
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">29L</v>
+                            </o>
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">30L</v>
+                            </o>
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">31L</v>
+                            </o>
+                            <o>
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">true</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">68L</v>
+                            </o>
+                          </l2>
+                        </o>
+                        <o n="Flags" t="Flags">
+                          <v n="Flags">0</v>
+                          <v n="Fixed">true</v>
+                          <v n="Extensible">false</v>
+                        </o>
+                        <n n="InputFlags" />
+                        <l2 n="InputItems" cet="BoxTreeOperand">
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"sNetId"</v>
+                              <v n="Type">"STRING"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">33L</v>
+                            </o>
+                            <v n="Id">32L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"sPathName"</v>
+                              <v n="Type">"STRING"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">35L</v>
+                            </o>
+                            <v n="Id">34L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">37L</v>
+                            </o>
+                            <v n="Id">36L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">""</v>
+                              <n n="Type" />
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">39L</v>
+                            </o>
+                            <v n="Id">38L</v>
+                          </o>
+                          <o>
+                            <o n="Operand" t="Operand">
+                              <v n="Operand">"T#5s"</v>
+                              <v n="Type">"TIME"</v>
+                              <v n="Comment">""</v>
+                              <v n="SymbolComment">""</v>
+                              <v n="Address">""</v>
+                              <o n="Flags" t="Flags">
+                                <v n="Flags">0</v>
+                                <v n="Fixed">false</v>
+                                <v n="Extensible">false</v>
+                              </o>
+                              <v n="LValue">false</v>
+                              <v n="Boolean">false</v>
+                              <v n="IsInstance">false</v>
+                              <v n="Id">41L</v>
+                            </o>
+                            <v n="Id">40L</v>
+                          </o>
+                        </l2>
+                        <o n="InputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>sNetId</v>
+                            <v>sPathName</v>
+                            <v>eCmd</v>
+                            <v>bExecute</v>
+                            <v>tTimeout</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>T_AmsNetId</v>
+                            <v>T_MaxString</v>
+                            <v>E_EnumCmdType</v>
+                            <v>BOOL</v>
+                            <v>TIME</v>
+                          </l2>
+                        </o>
+                        <o n="OutputParam" t="ParamList">
+                          <l2 n="Names" cet="String">
+                            <v>bBusy</v>
+                            <v>bError</v>
+                            <v>nErrID</v>
+                            <v>bEOE</v>
+                            <v>stFindFile</v>
+                          </l2>
+                          <l2 n="Types" cet="String">
+                            <v>BOOL</v>
+                            <v>BOOL</v>
+                            <v>UDINT</v>
+                            <v>BOOL</v>
+                            <v>ST_FindFileEntry</v>
+                          </l2>
+                        </o>
+                        <v n="CallType" t="Operator">FunctionBlock</v>
+                        <v n="EN">false</v>
+                        <v n="ENO">false</v>
+                        <n n="STSnippet" />
+                        <v n="ContainsExtensibleInputs">false</v>
+                        <v n="ProvidesSTSnippet">false</v>
+                        <v n="Id">67L</v>
+                      </o>
+                    </l2>
+                    <l2 n="Connectors" />
+                    <v n="Id">26L</v>
+                  </o>
+                </l2>
+                <v n="BranchCounter">0</v>
+                <v n="ValidIds">true</v>
+              </o>
+            </Data>
+            <TypeList>
+              <Type n="Boolean">System.Boolean</Type>
+              <Type n="BoxTreeBox">{acfc6f68-8e3a-4af5-bf81-3dd512095a46}</Type>
+              <Type n="BoxTreeOperand">{9de7f100-1b87-424c-a62e-45b0cfc85ed2}</Type>
+              <Type n="Flags">{668066f2-6069-46b3-8962-8db8d13d7db2}</Type>
+              <Type n="Int32">System.Int32</Type>
+              <Type n="Int64">System.Int64</Type>
+              <Type n="Network">{d9a99d73-b633-47db-b876-a752acb25871}</Type>
+              <Type n="NWLImplementationObject">{25e509de-33d4-4447-93f8-c9e4ea381c8b}</Type>
+              <Type n="Operand">{c9b2f165-48a2-4a45-8326-3952d8a3d708}</Type>
+              <Type n="Operator">{bffb3c53-f105-4e85-aba2-e30df579d75f}</Type>
+              <Type n="OutputItemList">{f40d3e09-c02c-4522-a88c-dac23558cfc4}</Type>
+              <Type n="ParamList">{71496971-9e0c-4677-a832-b9583b571130}</Type>
+              <Type n="String">System.String</Type>
+            </TypeList>
+          </XmlArchive>
+        </NWL>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_FindAllPartProgram">
+      <LineId Id="231" Count="0" />
+      <LineId Id="234" Count="0" />
+      <LineId Id="244" Count="0" />
+      <LineId Id="243" Count="0" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="337" Count="0" />
+      <LineId Id="237" Count="0" />
+      <LineId Id="233" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="128" Count="0" />
+      <LineId Id="228" Count="0" />
+      <LineId Id="209" Count="0" />
+      <LineId Id="289" Count="0" />
+      <LineId Id="297" Count="1" />
+      <LineId Id="329" Count="0" />
+      <LineId Id="328" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="346" Count="5" />
+      <LineId Id="345" Count="0" />
+      <LineId Id="47" Count="1" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="203" Count="3" />
+      <LineId Id="211" Count="1" />
+      <LineId Id="305" Count="0" />
+      <LineId Id="302" Count="0" />
+      <LineId Id="301" Count="0" />
+      <LineId Id="377" Count="0" />
+      <LineId Id="380" Count="1" />
+      <LineId Id="378" Count="0" />
+      <LineId Id="382" Count="0" />
+      <LineId Id="379" Count="0" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="303" Count="0" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="290" Count="1" />
+      <LineId Id="216" Count="1" />
+      <LineId Id="292" Count="1" />
+      <LineId Id="218" Count="2" />
+      <LineId Id="330" Count="0" />
+      <LineId Id="294" Count="1" />
+      <LineId Id="222" Count="1" />
+      <LineId Id="207" Count="0" />
+      <LineId Id="224" Count="3" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="245" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="127" Count="0" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="68" Count="1" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="50" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

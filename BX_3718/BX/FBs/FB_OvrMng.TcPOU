@@ -1,0 +1,145 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FB_OvrMng" Id="{21900fba-6c6e-4197-8a9f-8498098253f5}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_OvrMng
+// Funzione per la gestione della scheda encoder EP5151 utilizzata per la lettura del potenziometro di override
+// Sotto è riportata la configurazione della scheda EP5151
+VAR_INPUT
+	I_CounterValue       : UINT;    // Valore attuale del contatore encoder
+    I_SetCounterDone     : BOOL;    // Stato dell'operazione di set del contatore (TRUE se avvenuta con successo)
+    I_Overflow           : BOOL;    // Segnalazione di overflow del contatore
+    I_Underflow          : BOOL;    // Segnalazione di underflow del contatore
+    I_Multiplier         : USINT;   // Moltiplicatore per incrementi del potenziometro di override
+    I_SetCounter         : BOOL;    // Comando per il set manuale del contatore
+    I_SetCounterValue    : UINT;    // Valore da impostare nel contatore tramite comando di set
+    I_OvrMaxValue        : USINT;   // Limite massimo per il valore di override
+    I_OvrMinValue        : USINT;   // Limite minimo per il valore di override
+END_VAR                  
+VAR_OUTPUT               
+	Q_SetCounter        : BOOL;     // Stato del comando di set del contatore (attivo quando il contatore è impostato)
+    Q_SetCounterValue   : UINT;     // Valore al quale il contatore è impostato quando il comando di set è attivo
+END_VAR
+VAR_IN_OUT
+    I_CounterValueOld   : UINT;     // Valore precedente del contatore, usato per rilevare variazioni (variabile retentiva)
+    Q_Ovr               : USINT;    // Valore di override limitato ai valori massimo e minimo
+END_VAR
+VAR
+	diff					: DINT;
+	OvrTemp					: DINT;
+	RTRIG_SetCounter		: R_TRIG;
+END_VAR
+//8000:0     ENC Settings                     RW       > 23 <
+//8000:01    Enable C reset                   RW       FALSE
+//8000:02    Enable extern reset              RW       FALSE
+//8000:03    Enable up/down counter           RW       TRUE
+//8000:04    Gate polarity                    RW       Enable pos. gate (1)
+//8000:08    Disable filter                   RW       FALSE
+//8000:0A    Enable micro increments          RW       FALSE
+//8000:0B    Open circuit detection A         RW       TRUE
+//8000:0C    Open circuit detection B         RW       TRUE
+//8000:0D    Open circuit detection C         RW       TRUE
+//8000:0E    Reversion of rotation            RW       FALSE
+//8000:10    Extern reset polarity            RW       Rise (1)
+//8000:11    Frequency window                 RW       0x2710 (10000)
+//8000:13    Frequency scaling                RW       0.01Hz (100)
+//8000:14    Period scaling                   RW       100ns (100)
+//8000:15    Frequency resolution             RW       0.01Hz (100)
+//8000:16    Period resolution                RW       100ns (100)
+//8000:17    Frequency wait time              RW       0x0640 (1600)]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Inizializza il valore dell'override con il valore salvato nella variabile retentiva
+OvrTemp := Q_Ovr;
+
+// Aggiorna il valore del contatore dopo una variazione
+IF I_CounterValueOld <> I_CounterValue AND NOT Q_SetCounter THEN
+	diff := I_CounterValue - I_CounterValueOld;
+
+ // Gestisce overflow e underflow del contatore	
+	IF diff > 32767 THEN
+		diff := diff - 65536;
+	ELSIF diff < -32768 THEN 
+		diff := diff + 65536;
+	END_IF
+
+// Gestisce variazioni doppie causate da un singolo click della manopola (purtroppo la scheda si comporta in questo modo)
+// 1 click della manopola corrisponde a una variazione di ±2
+	IF ABS(diff) > 1 THEN
+		I_CounterValueOld := I_CounterValue;
+		OvrTemp := OvrTemp + (diff*I_Multiplier)/2;
+
+// Gestisce overflow e underflow a livello di scheda
+// Se si verifica un overflow o underflow, forza il contatore al valore massimo/2 per evitare condizioni di overflow persistenti
+		IF I_Overflow OR I_Underflow  AND NOT Q_SetCounter THEN
+			SetCounter(32767);
+		END_IF
+	END_IF
+END_IF
+
+// Gestione del set manuale del contatore; consente il controllo esterno del conteggio
+RTRIG_SetCounter(CLK := I_SetCounter);
+IF RTRIG_SetCounter.Q AND NOT Q_SetCounter THEN
+	SetCounter(I_SetCounterValue);
+END_IF
+IF Q_SetCounter AND I_SetCounterDone THEN
+	Q_SetCounter := FALSE;
+END_IF
+//////
+
+// Limita e applica il valore di override, rispettando i limiti massimo e minimo
+Q_Ovr := SEL(
+	OvrTemp > I_OvrMaxValue, 
+	(SEL(OvrTemp < I_OvrMinValue, (DINT_TO_USINT(OvrTemp)), I_OvrMinValue)), 
+	I_OvrMaxValue
+);
+    ]]></ST>
+    </Implementation>
+    <Method Name="SetCounter" Id="{ac4ab659-d945-4c58-b5bf-b052fb718e69}">
+      <Declaration><![CDATA[METHOD SetCounter : BOOL
+VAR_INPUT
+	CounterValue : UINT; // valore a cui forzare il conteggio
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Q_SetCounterValue := I_CounterValueOld := CounterValue;
+Q_SetCounter := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_OvrMng">
+      <LineId Id="782" Count="0" />
+      <LineId Id="770" Count="0" />
+      <LineId Id="774" Count="0" />
+      <LineId Id="671" Count="2" />
+      <LineId Id="775" Count="0" />
+      <LineId Id="712" Count="0" />
+      <LineId Id="674" Count="4" />
+      <LineId Id="776" Count="0" />
+      <LineId Id="783" Count="0" />
+      <LineId Id="777" Count="0" />
+      <LineId Id="680" Count="1" />
+      <LineId Id="685" Count="0" />
+      <LineId Id="778" Count="0" />
+      <LineId Id="784" Count="0" />
+      <LineId Id="686" Count="0" />
+      <LineId Id="715" Count="0" />
+      <LineId Id="717" Count="0" />
+      <LineId Id="691" Count="2" />
+      <LineId Id="779" Count="0" />
+      <LineId Id="773" Count="0" />
+      <LineId Id="694" Count="1" />
+      <LineId Id="718" Count="0" />
+      <LineId Id="699" Count="0" />
+      <LineId Id="701" Count="2" />
+      <LineId Id="780" Count="1" />
+      <LineId Id="714" Count="0" />
+      <LineId Id="713" Count="0" />
+      <LineId Id="785" Count="0" />
+      <LineId Id="788" Count="0" />
+      <LineId Id="786" Count="1" />
+      <LineId Id="116" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_OvrMng.SetCounter">
+      <LineId Id="7" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

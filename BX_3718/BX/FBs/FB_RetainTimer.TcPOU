@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FB_RetainTimer" Id="{5f9d101b-b15e-442c-8c53-76ff9dc9e749}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_RetainTimer
+VAR_INPUT
+	Enable 		: BOOL;			// Enable timer
+	Reset 		: BOOL;			// Reset timer
+END_VAR
+VAR_OUTPUT
+	ET			: TIME := T#0S;	// Elapsed TIME
+	ET_ms		: DWORD;		// Elapsed DWORD milliseconds
+END_VAR
+VAR
+	RTRIG_Enable	: R_TRIG;
+	FTRIG_Enable	: F_TRIG;
+	RTRIG_Reset		: R_TRIG;
+	StartTime		: TIME := T#0S;
+	SessionTime		: TIME := T#0S;
+	TotalTime		: TIME := T#0S;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Enable(CLK := Enable);
+FTRIG_Enable(CLK := Enable);
+RTRIG_Reset(CLK := Reset);
+
+// RESET
+	IF(RTRIG_Reset.Q) THEN
+		StartTime 	:= T#0S;
+		SessionTime := T#0S;
+		TotalTime 	:= T#0S;
+	END_IF
+
+// ENABLE
+	IF(RTRIG_Enable.Q AND NOT Reset) THEN
+		StartTime := TIME();
+	END_IF
+	
+	IF(FTRIG_Enable.Q) THEN
+		TotalTime := TotalTime + SessionTime;
+		SessionTime := T#0s;
+	END_IF
+
+///////////////////////////////////////////////////////////////
+
+// Updating time
+IF(Enable AND NOT Reset) THEN
+	SessionTime := TIME() - StartTime;
+END_IF
+
+ET := TotalTime + SessionTime;
+ET_ms := TIME_TO_DWORD(ET);]]></ST>
+    </Implementation>
+    <LineIds Name="FB_RetainTimer">
+      <LineId Id="50" Count="2" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="110" Count="3" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="117" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="53" Count="5" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="60" Count="4" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="92" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

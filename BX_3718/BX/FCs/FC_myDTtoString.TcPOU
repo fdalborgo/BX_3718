@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_myDTtoString" Id="{9bdc73a8-4fb8-4117-b0a1-56ad98b0f462}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_myDTtoString : STRING
+VAR_INPUT
+	in		: STRING;
+
+END_VAR
+VAR
+	tempString : ARRAY[0..2] OF STRING;
+	pos : INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[tempString[0] := DELETE(in, 3, 1);
+pos := FIND(tempString[0], '-');
+tempString[1] := tempString[0];
+WHILE pos > 0 DO
+	tempString[1] := REPLACE(tempString[1], '_', 1, pos);
+	pos := FIND(tempString[1], '-');
+END_WHILE
+
+pos := FIND(tempString[1], ':');
+tempString[2] := tempString[1];
+WHILE pos > 0 DO
+	tempString[2] := REPLACE(tempString[2], '_', 1, pos);
+	pos := FIND(tempString[2], ':');
+END_WHILE
+
+FC_myDTtoString := tempString[2];
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_myDTtoString">
+      <LineId Id="98" Count="0" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="113" Count="5" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="120" Count="0" />
+      <LineId Id="119" Count="0" />
+      <LineId Id="100" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

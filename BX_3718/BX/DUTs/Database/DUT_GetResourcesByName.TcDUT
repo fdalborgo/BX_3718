@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_GetResourcesByName" Id="{7501f314-633a-4f9e-a968-b59ff5c841f0}">
+    <Declaration><![CDATA[TYPE DUT_GetResourcesByName :
+STRUCT
+	return_value	: DINT;
+	ResourceName	: STRING(50);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

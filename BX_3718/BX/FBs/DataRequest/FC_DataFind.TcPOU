@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_DataFind" Id="{bf916154-5110-4f50-bf10-83eb694fe808}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_DataFind : BOOL
+VAR_INPUT
+	WIDP : DINT;
+	PmcData : POINTER TO DUT_St0Data;
+	stPLCData : POINTER TO DUT_stPLCData;
+	DataBuffer : POINTER TO DataBuffer;
+END_VAR
+VAR
+	i : UINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[FC_DataFind := FALSE;
+IF WIDP > 0 THEN
+	FOR i := 1 TO G.DATABUFFER_SIZE DO
+		IF WIDP = DataBuffer[i].WIDP THEN
+			PmcData^ := DataBuffer[i].PmcData;
+			stPLCData^ := DataBuffer[i].stPLCData;
+			FC_DataFind := TRUE;
+			RETURN;
+		END_IF
+	END_FOR	
+END_IF
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_DataFind">
+      <LineId Id="287" Count="1" />
+      <LineId Id="291" Count="2" />
+      <LineId Id="296" Count="0" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="297" Count="0" />
+      <LineId Id="294" Count="0" />
+      <LineId Id="289" Count="1" />
+      <LineId Id="284" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

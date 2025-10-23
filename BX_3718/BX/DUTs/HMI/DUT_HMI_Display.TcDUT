@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_HMI_Display" Id="{e00ae038-c37e-41d6-b540-88d88171d9e2}">
+    <Declaration><![CDATA[TYPE DUT_HMI_Display :
+STRUCT
+	Enable: BOOL;
+	Value:DINT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

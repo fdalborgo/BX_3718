@@ -1,0 +1,186 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FB_PartDataManager" Id="{d9efee49-5c2d-4d90-84b9-7d5ede3d8d69}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK PUBLIC FB_PartDataManager
+VAR_INPUT
+	ArraySize : INT;
+	DataRepository : POINTER TO stShiftData;	 // Element 0 for data preparation
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="Clear" Id="{56d82b02-0a26-43f9-a639-da06c7a91a05}">
+      <Declaration><![CDATA[METHOD Clear : BOOL
+VAR_INPUT
+	Position : INT := -1;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[	IF (Position>0 AND Position<ArraySize) THEN
+// Clear single position array repository  
+		MEMSET(ADR(DataRepository[Position]), 16#00, SIZEOF(stShiftData));
+	ELSIF Position =-1 THEN
+// Clear all position array	repository	
+		MEMSET(ADR(DataRepository), 16#00, SIZEOF(DataRepository));
+	ELSE
+// Error
+		;
+	END_IF
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Ins" Id="{9eea4549-f5fe-4c15-a07a-99abe6835205}">
+      <Declaration><![CDATA[METHOD Ins : BOOL
+VAR_INPUT
+	DataIn: stShiftData;
+END_VAR
+VAR
+	i: UINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[;
+(*IF NOT DataRepository[0].PartState.Valid THEN
+	MEMCPY(ADR(DataRepository[0]), ADR(DataIn), SIZEOF(DUT_PartData));	
+ELSE
+	// Error: GetNewPartData called with slot 0 non empty
+END_IF*)
+
+MEMCPY(ADR(DataRepository[0]), ADR(DataIn), SIZEOF(stShiftData));]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Move" Id="{8b64559b-4242-4256-907c-68ada91cdf5c}">
+      <Declaration><![CDATA[METHOD M_Move : BOOL
+VAR_INPUT
+	DestPos		: UINT;
+	SourcePos	: UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF DestPos >= 0 AND DestPos <= ArraySize AND SourcePos >=0 AND SourcePos <= ArraySize THEN
+	MEMCPY(ADR(DataRepository[DestPos]), ADR(DataRepository[SourcePos]), SIZEOF(stShiftData));
+	
+	MEMSET(ADR(DataRepository[SourcePos]), 16#00, SIZEOF(stShiftData));
+ELSE
+	;//error
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Read" Id="{652e984b-38b8-4135-a074-4671448e3737}">
+      <Declaration><![CDATA[METHOD PUBLIC Read : BOOL
+VAR_INPUT
+	Position 	: UINT;
+END_VAR
+
+VAR_OUTPUT
+	Dest		: stShiftData;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+//CASE Position OF
+//	0..NUM_STAIONS:
+//		MEMCPY(ADR(Dest), ADR(DataRepository[Position]), SIZEOF(DUT_PartData));
+//ELSE	
+//	;	// Error
+//END_CASE
+
+IF (Position>0 AND Position<20) THEN
+		MEMCPY(ADR(Dest), ADR(DataRepository[Position]), SIZEOF(stShiftData));
+ELSE	
+	;	// Error
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Shift" Id="{892c4d59-aa66-4f64-9518-57b9d71d2c24}">
+      <Declaration><![CDATA[METHOD PUBLIC Shift : BOOL
+VAR
+	i : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Shift data array from StartPos(first data array moved) to EndPos (Last data array destination)
+FOR i:= ArraySize TO 1 BY -1 DO
+	MEMCPY(ADR(DataRepository[i]), ADR(DataRepository[i-1]), SIZEOF(stShiftData));
+END_FOR;
+
+// Clear start position data array
+MEMSET(ADR(DataRepository[0]), 16#00, SIZEOF(stShiftData));]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ShiftRange" Id="{9dfec352-03f6-48cd-88c1-9d4d9e4f898f}">
+      <Declaration><![CDATA[METHOD PUBLIC ShiftRange : BOOL
+VAR_INPUT
+	StartPos	: INT;
+	EndPos 		: INT;
+END_VAR
+VAR
+	i : INT;
+	N : INT := 0;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF(StartPos < EndPos AND EndPos <= ArraySize) THEN
+	N := EndPos - StartPos - 1;
+	FOR i:= 0 TO N DO
+		MEMCPY(ADR(DataRepository[EndPos-i]), ADR(DataRepository[EndPos-i-1]), SIZEOF(stShiftData));
+	END_FOR;
+ELSE
+	; //Error;
+END_IF;
+
+// Clear start position data array
+MEMSET(ADR(DataRepository[StartPos]), 16#00, SIZEOF(stShiftData));
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Update" Id="{d3650d60-0ffc-4bc1-bd58-c433b0396e32}">
+      <Declaration><![CDATA[METHOD Update : BOOL
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// TODO: GraphQL mutation with FIFO]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_PartDataManager">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PartDataManager.Clear">
+      <LineId Id="3" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PartDataManager.Ins">
+      <LineId Id="3" Count="6" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PartDataManager.M_Move">
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PartDataManager.Read">
+      <LineId Id="3" Count="8" />
+      <LineId Id="13" Count="2" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PartDataManager.Shift">
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PartDataManager.ShiftRange">
+      <LineId Id="3" Count="10" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PartDataManager.Update">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

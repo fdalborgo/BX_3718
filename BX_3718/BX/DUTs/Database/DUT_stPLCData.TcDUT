@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_stPLCData" Id="{bccfa25a-56c9-4b71-a6af-222c40456e61}">
+    <Declaration><![CDATA[TYPE DUT_stPLCData :
+STRUCT
+	PartId : DINT;
+	RowIndex : STRING(50);
+	RunningNo : STRING(50);
+  	ProfileName : STRING(50);
+  	FamilyName : STRING(50);
+  	PlugType : STRING(50);
+  	IsFirstPartInBatch : STRING(50);
+  	IsLastPartInBatch : STRING(50);
+  	IsFirstPartInRow : STRING(50);
+  	IsLastPartInRow : STRING(50);
+	MarkingData : DUT_stMarkingData;
+	Brushing : STRING(50);
+	BackHole : STRING(50);
+	UnloadingModeId : DINT;
+	BroachingPlan : DUT_stBroachingPlan;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,452 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_Lasit" Id="{cdac04c6-082a-495d-89e0-ecf5afa2e9e3}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Lasit EXTENDS FB_EthDevice
+VAR_OUTPUT
+	Connecting				: BOOL  := FALSE; // Indica la connessione in corso, se Connecting = False e bConnected = False allora connessione in timeout
+END_VAR
+VAR
+	sCmd					: T_MaxString;
+	TON_WaitConnection		: TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[SUPER^();
+// TIMER
+TON_WaitConnection( IN := bEnable, PT := T#10S);
+Connecting := bEnable AND NOT TON_WaitConnection.Q AND NOT bConnected;]]></ST>
+    </Implementation>
+    <Method Name="DynamicCmd" Id="{671d6652-10bb-4cd4-be94-324b7be30cda}">
+      <Declaration><![CDATA[METHOD DynamicCmd : BOOL
+// Description : Ask for the status of the machine
+VAR_INPUT
+	I_Id	: STRING;
+	I_Text	: STRING;
+END_VAR
+VAR
+	sTemp1 : STRING;
+	sTemp2 : STRING;
+	sTemp3 : STRING;
+	sTemp4 : STRING;
+	sTemp5 : STRING;
+	sTemp6 : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sData := '';
+sTemp1 := 'T';
+sTemp2 := CONCAT(STX, sTemp1);
+sTemp3 := CONCAT(SOH, sTemp2);
+sTemp4 := CONCAT(sTemp3, I_Id);
+sTemp5 := CONCAT(sTemp4, I_Text);
+sTemp6 := CONCAT(sTemp5, ETX);
+sCmd := CONCAT(sTemp6, EOT);
+THIS^.Send(sCmd);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="DynamicCmd_Done" Id="{58db8200-094a-4216-ad5a-ec15a8fb7840}">
+      <Declaration><![CDATA[METHOD DynamicCmd_Done : BOOL
+VAR
+	sTemp1 : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF sData = '' THEN
+	DynamicCmd_Done := FALSE;
+ELSE
+	sTemp1 := sData;
+	IF FC_Check_SOH(sTemp1) AND FC_Check_ACK(sTemp1) AND FC_Check_EOT(sTemp1) AND FC_Check_T(sTemp1) THEN
+		DynamicCmd_Done := TRUE;
+	ELSE
+		DynamicCmd_Done := FALSE;
+	END_IF
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Init" Id="{b9876a06-f4c5-4926-b84e-c614330839bd}">
+      <Declaration><![CDATA[METHOD Init : BOOL
+// Description : Ask for the status of the machine
+VAR_INPUT
+END_VAR
+VAR
+	sTemp1 : STRING;
+	sTemp2 : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sData := '';
+sTemp1 := 'IN';
+sTemp2 := CONCAT(SOH, sTemp1);
+sCmd := CONCAT(sTemp2, EOT);
+sData := '';
+this^.Send(sCmd);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Init_Done" Id="{7bf24550-a6fb-4b53-b0cb-2e7ab29767f7}">
+      <Declaration><![CDATA[METHOD Init_Done : BOOL
+VAR
+	sTemp1 : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF sData = '' THEN
+	Init_Done := FALSE;
+ELSE
+	sTemp1 := sData;
+	IF FC_Check_SOH(sTemp1) AND FC_Check_ACK(sTemp1) AND FC_Check_EOT(sTemp1) AND FC_Check_IN(sTemp1) THEN
+		Init_Done := TRUE;
+	ELSE
+		Init_Done := FALSE;
+	END_IF
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="JobChoice" Id="{07c018c1-be46-4f47-bbaa-11f020c915f1}">
+      <Declaration><![CDATA[METHOD JobChoice : BOOL
+// Description : Ask for the status of the machine
+VAR_INPUT
+	I_Layout	: STRING;
+END_VAR
+VAR
+	sTemp1 : STRING;
+	sTemp2 : STRING;
+	sTemp3 : STRING;
+	sTemp4 : STRING;
+	sTemp5 : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sData := '';
+sTemp1 := 'J';
+sTemp2 := CONCAT(STX, sTemp1);
+sTemp3 := CONCAT(SOH, sTemp2);
+sTemp4 := CONCAT(sTemp3, I_Layout);
+sTemp5 := CONCAT(sTemp4, ETX);
+sCmd := CONCAT(sTemp5, EOT);
+THIS^.Send(sCmd);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="JobChoice_Done" Id="{535b5c35-48ed-4926-95d7-28917795d22c}">
+      <Declaration><![CDATA[METHOD JobChoice_Done : BOOL
+VAR
+	sTemp1 : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF sData = '' THEN
+	JobChoice_Done := FALSE;
+ELSE
+	sTemp1 := sData;
+	IF FC_Check_SOH(sTemp1) AND FC_Check_ACK(sTemp1) AND FC_Check_EOT(sTemp1) AND FC_Check_J(sTemp1) THEN
+		JobChoice_Done := TRUE;
+	ELSE
+		JobChoice_Done := FALSE;
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="LastMarking" Id="{246e4ca3-ff33-4da8-93b3-e45bc836c3ed}">
+      <Declaration><![CDATA[METHOD LastMarking : BOOL
+// Description : Ask for the status of the machine
+VAR_INPUT
+END_VAR
+VAR
+	sTemp1 : STRING;
+	sTemp2 : STRING;
+	sTemp3 : STRING;
+	sTemp4 : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sData := '';
+sTemp1 := 'Q';
+sTemp2 := CONCAT(STX, sTemp1);
+sTemp3 := CONCAT(SOH, sTemp2);
+sTemp4 := CONCAT(sTemp3, ETX);
+sCmd := CONCAT(sTemp4, EOT);
+THIS^.Send(sCmd);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="LastMarking_Done" Id="{c72aa44b-3956-4232-b2d0-419d43724bd1}">
+      <Declaration><![CDATA[METHOD LastMarking_Done : BOOL
+VAR_OUTPUT
+	Q_nSN		: INT;
+	Q_sStatus	: T_MaxString;
+END_VAR
+VAR
+	sTemp1	: T_MaxString;
+	sLeft	: T_MaxString;
+	sRight	: T_MaxString;
+	nPos	: INT;
+	nLen	: INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Q_nSN 		:= 0;
+Q_sStatus	:= '';
+IF sData = '' THEN
+	LastMarking_Done := FALSE;
+ELSE
+	sTemp1 := sData;
+	IF FC_Check_SOH(sTemp1) AND FC_Check_ACK(sTemp1) AND FC_Check_EOT(sTemp1) THEN
+		nPos := FIND(sTemp1,';');
+		IF nPos <> 0 THEN
+			nLen := LEN(sTemp1);
+			sLeft := LEFT(sTemp1, nPos-1);
+			Q_sStatus := RIGHT(sTemp1, nLen - nPos);
+			Q_nSN := STRING_TO_INT(sLeft);
+			LastMarking_Done := TRUE;
+		ELSE
+			LastMarking_Done := FALSE;
+		END_IF
+	ELSE
+		LastMarking_Done := FALSE;
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MultyDynamicCmd" Id="{dccc27be-f039-46a2-8603-4f8600f712a1}">
+      <Declaration><![CDATA[METHOD MultyDynamicCmd : BOOL
+// Description : Ask for the status of the machine
+VAR_INPUT
+	I_NumberOfCmd : USINT; // FROM 1 TO 10
+	I_Id	: ARRAY[1..9] OF T_MaxString;
+	I_Text	: ARRAY[1..9] OF T_MaxString;
+END_VAR
+VAR
+	sTemp1 : T_MaxString;
+	sTemp2 : T_MaxString;
+	sTemp3 : T_MaxString;
+	sTemp4 : T_MaxString;
+	sTemp5 : T_MaxString;
+	sTemp6 : T_MaxString;
+	sTemp7 : T_MaxString;
+	i : USINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sData := '';
+sTemp1 := CONCAT(STX, 'T0');
+sTemp2 := ETX;
+
+FOR i := 1 TO I_NumberOfCmd DO
+	sTemp3 := CONCAT(sTemp1, I_Id[i]);
+	sTemp4 := CONCAT(sTemp3, I_Text[i]);
+	sTemp5 := CONCAT(sTemp4, sTemp2);
+	sTemp6 := CONCAT(sTemp6, sTemp5);
+END_FOR
+
+sTemp7 := CONCAT(SOH, sTemp6);
+sCmd := CONCAT(sTemp7, EOT);
+THIS^.Send(sCmd);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReadStatus" Id="{3af7600e-ca18-4270-838a-99678996d1e6}">
+      <Declaration><![CDATA[METHOD ReadStatus : BOOL
+// Description : Ask for the status of the machine
+VAR_INPUT
+END_VAR
+VAR
+	sTemp1 : STRING;
+	sTemp2 : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sData := '';
+sTemp1 := 'K';
+sTemp2 := CONCAT(SOH, sTemp1);
+sCmd := CONCAT(sTemp2, EOT);
+THIS^.Send(sCmd);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReadStatus_Done" Id="{dc9c548c-eea4-4182-86df-6cc4a003fd1a}">
+      <Declaration><![CDATA[METHOD ReadStatus_Done : BOOL
+VAR_OUTPUT
+	Q_wStatusWord1	: WORD;
+	Q_wStatusWord2	: WORD;
+END_VAR
+VAR
+	sTemp1	: T_MaxString;
+	sLeft	: T_MaxString;
+	sRight	: T_MaxString;
+	nPos	: INT;
+	nLen	: INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Q_wStatusWord1 := 0;
+Q_wStatusWord2 := 0;
+IF sData = '' THEN
+	ReadStatus_Done := FALSE;
+ELSE
+	sTemp1 := sData;
+	IF FC_Check_SOH(sTemp1) AND FC_Check_ACK(sTemp1) AND FC_Check_EOT(sTemp1) AND FC_Check_K(sTemp1) THEN
+		nPos := FIND(sTemp1,',');
+		IF nPos <> 0 THEN
+			nLen := LEN(sTemp1);
+			sLeft := LEFT(sTemp1, nPos-1);
+			sRight := RIGHT(sTemp1, nLen - nPos);
+			Q_wStatusWord1 := STRING_TO_WORD(sLeft);
+			Q_wStatusWord2 := STRING_TO_WORD(sRight);
+			ReadStatus_Done := TRUE;
+		ELSE
+			ReadStatus_Done := FALSE;
+		END_IF
+	ELSE
+		ReadStatus_Done := FALSE;
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Reset" Id="{12df36fa-501e-446e-b13f-f8b42daf4d32}">
+      <Declaration><![CDATA[METHOD Reset : BOOL
+// Description : Ask for the status of the machine
+VAR_INPUT
+END_VAR
+VAR
+	sTemp1 : STRING;
+	sTemp2 : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sData := '';
+sTemp1 := 'R';
+sTemp2 := CONCAT(SOH, sTemp1);
+sCmd := CONCAT(sTemp2, EOT);
+THIS^.Send(sCmd);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Reset_Done" Id="{4885f38c-353a-4130-9c14-34fe55db4916}">
+      <Declaration><![CDATA[METHOD Reset_Done : BOOL
+VAR
+	sTemp1 : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF sData = '' THEN
+	Reset_Done := FALSE;
+ELSE
+	sTemp1 := sData;
+	IF FC_Check_SOH(sTemp1) AND FC_Check_ACK(sTemp1) AND FC_Check_EOT(sTemp1) AND FC_Check_R(sTemp1) THEN
+		Reset_Done := TRUE;
+	ELSE
+		Reset_Done := FALSE;
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Start" Id="{02930f2d-6d35-4391-99a3-d3a2b6c927ca}">
+      <Declaration><![CDATA[METHOD Start : BOOL
+// Description : Ask for the status of the machine
+VAR_INPUT
+END_VAR
+VAR
+	sTemp1 : STRING;
+	sTemp2 : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sData := '';
+sTemp1 := 'S';
+sTemp2 := CONCAT(SOH, sTemp1);
+sCmd := CONCAT(sTemp2, EOT);
+THIS^.Send(sCmd);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Start_Done" Id="{785a40e4-96de-4a1b-9e25-6d0133194b14}">
+      <Declaration><![CDATA[METHOD Start_Done : BOOL
+VAR
+	sTemp1 : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF sData = '' THEN
+	Start_Done := FALSE;
+ELSE
+	sTemp1 := sData;
+	IF FC_Check_SOH(sTemp1) AND FC_Check_ACK(sTemp1) AND FC_Check_EOT(sTemp1) AND FC_Check_S(sTemp1) THEN
+		Start_Done := TRUE;
+	ELSE
+		Start_Done := FALSE;
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_Lasit">
+      <LineId Id="379" Count="3" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.DynamicCmd">
+      <LineId Id="3" Count="7" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.DynamicCmd_Done">
+      <LineId Id="3" Count="10" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.Init">
+      <LineId Id="3" Count="4" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.Init_Done">
+      <LineId Id="3" Count="9" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.JobChoice">
+      <LineId Id="3" Count="6" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.JobChoice_Done">
+      <LineId Id="3" Count="8" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.LastMarking">
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.LastMarking_Done">
+      <LineId Id="3" Count="19" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.MultyDynamicCmd">
+      <LineId Id="52" Count="1" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="54" Count="1" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.ReadStatus">
+      <LineId Id="3" Count="3" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.ReadStatus_Done">
+      <LineId Id="3" Count="20" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.Reset">
+      <LineId Id="3" Count="3" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.Reset_Done">
+      <LineId Id="3" Count="8" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.Start">
+      <LineId Id="3" Count="3" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Lasit.Start_Done">
+      <LineId Id="3" Count="8" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_ButtonTrigger" Id="{a1240fb8-1c82-4403-bec9-08ea47dc0f09}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ButtonTrigger
+VAR_INPUT
+	I_Command		: BOOL;
+	I_CommandEnable	: BOOL;
+	I_Reset			: BOOL;
+	I_ResetEnable	: BOOL;
+END_VAR
+VAR_IN_OUT
+	Q_Out			: BOOL;
+END_VAR
+VAR
+	RTRIG_Set	: R_TRIG;
+	RTRIG_Reset	: R_TRIG;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Set(CLK := I_Command);
+RTRIG_Reset(CLK := I_Reset);
+
+IF RTRIG_Reset.Q AND I_ResetEnable THEN
+	Q_Out := FALSE;
+ELSIF RTRIG_Set.Q AND I_CommandEnable THEN
+	Q_Out := TRUE;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_ButtonTrigger">
+      <LineId Id="236" Count="6" />
+      <LineId Id="44" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

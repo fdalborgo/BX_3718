@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="eLoadingMode" Id="{2a8290f3-1be9-4a48-ad56-3133980efdd5}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE eLoadingMode :
+(
+	Auto	  := 1,
+	Manual	  := 2, 
+	SemiAuto  := 3
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

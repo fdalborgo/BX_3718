@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_BroachingPlanCopyPass" Id="{e2e1860e-d379-4368-9322-033e6802402c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_BroachingPlanCopyPass
+VAR_INPUT
+	pByte : POINTER TO BYTE;
+	BaseBroachingPlan 		: DUT_stBroachingPlanBase;     
+    VariantsBroachingPlan	: DUT_stBroachingPlanVariants;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[pByte[0]	:= DINT_TO_BYTE(BaseBroachingPlan.ToolHolderBase_Position);
+pByte[1]	:= DINT_TO_BYTE(VariantsBroachingPlan.ToolHolderA_Position);
+pByte[2]	:= DINT_TO_BYTE(VariantsBroachingPlan.ToolHolderB_Position);
+pByte[3]	:= DINT_TO_BYTE(VariantsBroachingPlan.ToolHolderC_Position);
+pByte[4]	:= DINT_TO_BYTE(VariantsBroachingPlan.ToolHolderD_Position);
+pByte[5] 	:= DINT_TO_BYTE(VariantsBroachingPlan.ToolHolderE_Position);
+pByte[6] 	:= DINT_TO_BYTE(VariantsBroachingPlan.ToolHolderF_Position);
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_BroachingPlanCopyPass">
+      <LineId Id="246" Count="5" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="151" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

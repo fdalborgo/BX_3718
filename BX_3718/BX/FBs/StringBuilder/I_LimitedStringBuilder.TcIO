@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_LimitedStringBuilder" Id="{194bb722-4e19-4a72-9bf7-057dc58bb68e}">
+    <Declaration><![CDATA[INTERFACE I_LimitedStringBuilder
+]]></Declaration>
+    <Method Name="Append" Id="{c1fd36d6-9aa3-4352-9719-226e4a16c216}">
+      <Declaration><![CDATA[METHOD  Append : I_StringBuilder // Append text to t current build string.
+VAR_INPUT
+	Text : STRING; //Text to append to current build string
+END_VAR]]></Declaration>
+    </Method>
+    <Method Name="Left" Id="{2f9c4273-e955-4025-93f9-c4ff974a7b9f}">
+      <Declaration><![CDATA[METHOD Left : I_StringBuilder
+VAR_INPUT
+	Count : INT;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Length" Id="{6672f6f6-8923-436c-8365-e1ec6007f746}">
+      <Declaration><![CDATA[PROPERTY Length : INT]]></Declaration>
+      <Get Name="Get" Id="{894ce71b-c68f-48e0-8db7-33d19b2c0a3f}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Reset" Id="{0267de3b-ea97-4e81-b5fa-899dfdee3f2c}">
+      <Declaration><![CDATA[METHOD Reset : I_LimitedStringBuilder //Reset current build string to an empty string.]]></Declaration>
+    </Method>
+    <Method Name="Right" Id="{e124d91a-18be-4ab9-8ee1-853b8fad81b2}">
+      <Declaration><![CDATA[METHOD Right : I_StringBuilder
+VAR_INPUT
+	Count : INT;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="ToString" Id="{9510ec58-ffae-406c-b1a3-226f94c7f534}">
+      <Declaration><![CDATA[METHOD ToString : STRING //Returns current build string.]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

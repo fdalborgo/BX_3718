@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="stTestStringUnion" Id="{0f9fb525-81ee-4528-9fa3-b6549ecc18ce}">
+    <Declaration><![CDATA[TYPE stTestStringUnion :
+UNION
+	sString		: STRING(DB.MAX_STRING_SIZE);
+	nByte		: ARRAY[0..DB.MAX_STRING_SIZE] OF BYTE;
+END_UNION
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

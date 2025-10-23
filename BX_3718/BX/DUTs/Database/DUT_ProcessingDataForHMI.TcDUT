@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_ProcessingDataForHMI" Id="{f9a6dc58-9acd-4bea-abe3-e30cd6fb4d8e}">
+    <Declaration><![CDATA[TYPE DUT_ProcessingDataForHMI :
+STRUCT
+	return_: DINT;
+	ProcessingData : STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

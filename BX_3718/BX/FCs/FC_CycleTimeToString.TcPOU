@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_CycleTimeToString" Id="{32bc795c-1532-4f06-9ce1-df0767ae79d9}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_CycleTimeToString : STRING(20);
+VAR_INPUT
+	CycleTime	: DWORD;
+END_VAR
+VAR
+    TempStr : STRING(20);
+    Thousands : UDINT;
+    Remainder : UDINT;
+	sRemainder : STRING(3);
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* Calcolo delle migliaia e del resto *)
+Thousands := CycleTime / 1000;
+Remainder := CycleTime MOD 1000;
+
+(* Creazione della stringa con il formato richiesto *)
+IF Thousands = 0 THEN
+    // Se < 1000: stampiamo il valore diretto
+	TempStr := '0.';
+    TempStr := CONCAT(TempStr, DWORD_TO_STRING(CycleTime));
+ELSE
+     // Se >= 1000: separiamo migliaia e resto, es. 10901 -> "10.901"
+    TempStr := UDINT_TO_STRING(Thousands);
+
+    // Converto il resto in stringa
+    sRemainder := UDINT_TO_STRING(Remainder);
+
+    // Aggiungo eventuali zeri a sinistra, per avere sempre 3 cifre nel resto
+    IF LEN(sRemainder) = 1 THEN
+        sRemainder := CONCAT('00', sRemainder);
+    ELSIF LEN(sRemainder) = 2 THEN
+        sRemainder := CONCAT('0', sRemainder);
+    END_IF
+
+    // Creo la parte "xxx.yyy"
+    TempStr := CONCAT(TempStr, '.');
+	TempStr := CONCAT(TempStr, sRemainder);
+END_IF;
+
+// Aggiungo la " s" finale
+FC_CycleTimeToString := CONCAT(TempStr, ' s');
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_CycleTimeToString">
+      <LineId Id="179" Count="1" />
+      <LineId Id="143" Count="0" />
+      <LineId Id="182" Count="3" />
+      <LineId Id="214" Count="0" />
+      <LineId Id="191" Count="0" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="192" Count="14" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="181" Count="0" />
+      <LineId Id="210" Count="1" />
+      <LineId Id="209" Count="0" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="188" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

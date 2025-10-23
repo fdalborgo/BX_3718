@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_stBroachingPlanVariants" Id="{02168109-7d77-4e21-8e3b-debe930e0e8d}">
+    <Declaration><![CDATA[TYPE DUT_stBroachingPlanVariants :
+STRUCT
+   ToolHolderA_Position				: DINT;
+   ToolHolderA_BroachName			: STRING(50);
+   ToolHolderA_LateralCompensation	: REAL;
+   ToolHolderA_DepthCompensation	: REAL;
+   ToolHolderA_AngleCompensation	: REAL;
+   ToolHolderB_Position				: DINT;
+   ToolHolderB_BroachName			: STRING(50);
+   ToolHolderB_LateralCompensation	: REAL;
+   ToolHolderB_DepthCompensation	: REAL;
+   ToolHolderB_AngleCompensation	: REAL;
+   ToolHolderC_Position				: DINT;
+   ToolHolderC_BroachName			: STRING(50);
+   ToolHolderC_LateralCompensation	: REAL;
+   ToolHolderC_DepthCompensation	: REAL;
+   ToolHolderC_AngleCompensation	: REAL;
+   ToolHolderD_Position				: DINT;
+   ToolHolderD_BroachName			: STRING(50);
+   ToolHolderD_LateralCompensation	: REAL;
+   ToolHolderD_DepthCompensation	: REAL;
+   ToolHolderD_AngleCompensation	: REAL;
+   ToolHolderE_Position				: DINT;
+   ToolHolderE_BroachName			: STRING(50);
+   ToolHolderE_LateralCompensation	: REAL;
+   ToolHolderE_DepthCompensation	: REAL;
+   ToolHolderE_AngleCompensation	: REAL;
+   ToolHolderF_Position				: DINT;
+   ToolHolderF_BroachName			: STRING(50);
+   ToolHolderF_LateralCompensation	: REAL;
+   ToolHolderF_DepthCompensation	: REAL;
+   ToolHolderF_AngleCompensation	: REAL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_HMI_Events" Id="{eb89f784-c887-4283-abb5-68cb7d870607}">
+    <Declaration><![CDATA[TYPE DUT_HMI_Events :
+STRUCT
+	Clear :BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

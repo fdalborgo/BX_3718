@@ -1,0 +1,285 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FB_ClientConnection" Id="{a6c2c808-6e8b-4998-a86b-c39b02d74fa3}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ClientConnection
+VAR_IN_OUT
+	fbTx 			: FB_FrameFifo;(* TX fifo *)
+	fbRx 			: FB_FrameFifo;(* RX fifo *)
+END_VAR
+VAR_INPUT
+	sSrvNetID		: T_AmsNetID 	:= '';(* TwinCAT TCP/IP server network address *)
+	sRemoteHost		: T_IPv4Addr 	:= '127.0.0.1';(* IP adress of remote server *)
+	nRemotePort		: UDINT 		:= 0;(* Server port number *)
+	bEnable			: BOOL 			:= FALSE;(* TRUE => connect and exchange data, FALSE => disconnect *)
+	tReconnect 		: TIME 			:= T#5S;(* Try to reconnect after this time *)
+	tPoll			: TIME 			:= T#50MS;(* Polling time *)
+	tResponse		: TIME 			:= T#1S;(* Timeout waiting for response *)
+END_VAR
+VAR_OUTPUT
+	bConnected		: BOOL 			:= FALSE;(* Established connection status *)
+END_VAR
+VAR
+	fbConnect 		: FB_SocketConnect;
+	fbClose			: FB_SocketClose;
+	fbSend			: FB_SocketSend;
+	fbReceive		: FB_SocketReceive;
+	eStep			: eConnectionSteps;
+	bSndBusy 		: BOOL;(* Tx state *)
+	bRcvBusy 		: BOOL;(* Rx state *)
+	bDisconnect		: BOOL;(* Disconnect flag, if set the socket will be closed *)
+	
+	TON_PollTimer		: TON;(* Receive poll timer *)
+	TON_ResponseTimer 	: TON;(* Waiting response timeout timer *)
+	TON_ReconnectTimer	: TON := (PT := T#5S);(* Reconnect timer *)
+	
+	rxBuffer			: ARRAY[0..PLCPRJ_BUFFER_SIZE] OF BYTE;
+	sTxFrame			: T_MaxString;
+	sRxFrame			: T_MaxString;
+	cbReceived			: UDINT;
+	nLenOfString		: UDINT;(* String length inclusive the null delimiter *)
+	bEndOfString		: BOOL := FALSE;
+	StartPolling		: BOOL; // 1 = reciving mode, polling reciving command until there is no new data in the socket (nRecBytes = 0) / 0 = reciving finished, send command again possible
+	MemFirstFrame		: BOOL; // received at least one frame
+	RxBusy				: BOOL; // received at least one frame
+	RTRIG_FirstFrame	: R_TRIG; // trigger first frame
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF eStep <> eCONNECTION_STATE_DATAEXCHANGE THEN
+	StartPolling 	:= FALSE;
+	MemFirstFrame	:= FALSE;
+	bRcvBusy 		:= FALSE;	
+END_IF
+
+CASE eStep OF
+	eCONNECTION_STATE_IDLE:
+		IF bEnable XOR bConnected THEN
+			IF bEnable THEN
+				TON_ReconnectTimer( IN := TRUE);
+				IF TON_ReconnectTimer.Q THEN
+
+					fbTx.Clear();(* Clear send fifo *)
+					fbRx.Clear();(* Clear receiver fifo *)
+					
+					bSndBusy := FALSE;
+					bRcvBusy := FALSE;
+					bDisconnect := FALSE;
+					cbReceived := 0;
+
+					
+					TON_ReconnectTimer( IN := FALSE, PT := tReconnect );
+
+					eStep := eCONNECTION_STATE_CONNECT_START;
+				END_IF
+			ELSE
+				eStep := eCONNECTION_STATE_CLOSE_START;
+			END_IF
+		ELSIF bConnected THEN
+			eStep := eCONNECTION_STATE_DATAEXCHANGE;
+		ELSE
+			TON_ReconnectTimer( IN := FALSE, PT := T#0S );
+		END_IF
+
+	eCONNECTION_STATE_CONNECT_START:
+		fbConnect( bExecute := FALSE );
+		fbConnect( sSrvNetID := sSrvNetID, 
+					sRemoteHost := sRemoteHost, 
+					nRemotePort := nRemotePort, 
+					bExecute := TRUE );
+		eStep := eCONNECTION_STATE_CONNECT_WAIT;
+
+	eCONNECTION_STATE_CONNECT_WAIT:
+		fbConnect( bExecute := FALSE );
+		IF NOT fbConnect.bBusy THEN
+			IF NOT fbConnect.bError THEN
+				bConnected 	:= TRUE;
+				eStep := eCONNECTION_STATE_IDLE;
+			ELSE
+				
+				eStep := eCONNECTION_STATE_ERROR;
+			END_IF
+		END_IF
+
+	eCONNECTION_STATE_DATAEXCHANGE:
+		TON_ResponseTimer(PT := PLCPRJ_RECEIVE_TIMEOUT);(* Bytes received => disable timeout check *)
+		TON_PollTimer( IN := NOT TON_PollTimer.Q, PT := PLCPRJ_RECEIVE_POLLING_TIME );
+		
+		bDisconnect := NOT bEnable OR bDisconnect;(* User/internal disconnect requested? *)
+		IF bDisconnect AND NOT bSndBusy AND NOT bRcvBusy THEN
+			bDisconnect := FALSE;
+			eStep := eCONNECTION_STATE_CLOSE_START;(* Disconnect *)
+		ELSE
+	
+(* SEND *)
+			IF NOT bDisconnect AND NOT bSndBusy AND NOT StartPolling THEN
+				fbTx.RemoveHead( sGet => sTxFrame );(* Remove oldest string entry s*)
+				IF fbTx.bOk THEN(* Success *)
+					fbSend( bExecute := FALSE );
+					fbSend(	sSrvNetID := sSrvNetID,
+							hSocket	:= fbConnect.hSocket,
+							pSrc	:= ADR( sTxFrame ),
+							cbLen	:= INT_TO_UDINT(LEN( sTxFrame )) + 1,(* String length inclusive the zero delimiter *)
+							bExecute:= TRUE ); // Send command
+					bSndBusy := TRUE;
+					StartPolling	:= FALSE;
+				END_IF
+			ELSE 
+				fbSend( bExecute := FALSE );
+				IF NOT fbSend.bBusy THEN
+					// after send command
+					bSndBusy := FALSE;
+					IF fbSend.bError THEN
+						
+						bDisconnect := TRUE;(* Set flag *)
+					END_IF
+					
+					IF NOT StartPolling THEN
+						// start reciving until there is no new data in the socket or timeout
+						TON_ResponseTimer.IN := TRUE;
+						StartPolling	:= TRUE;
+					END_IF;
+				END_IF
+			END_IF
+
+(* RECEIVE *)
+			RTRIG_FirstFrame( CLK := fbReceive.nRecBytes <> 0);
+			IF RTRIG_FirstFrame.Q THEN
+				// received at least one frame
+				MemFirstFrame := TRUE;
+			END_IF
+			IF MemFirstFrame AND fbReceive.nRecBytes = 0 THEN
+				// reciving finished
+				StartPolling 	:= FALSE;
+				MemFirstFrame	:= FALSE;
+				bRcvBusy 		:= FALSE;
+			END_IF
+			IF NOT bDisconnect AND NOT bRcvBusy AND StartPolling THEN
+				IF TON_PollTimer.Q THEN
+					// polling
+					fbReceive( bExecute := FALSE );
+					fbReceive( 	sSrvNetID := sSrvNetID, 
+								hSocket	:= fbConnect.hSocket,
+								pDest	:= ADR( rxBuffer ) + cbReceived,
+								cbLen	:= SIZEOF( rxBuffer ) - cbReceived,
+								bExecute:= TRUE ); // Reciving command
+					bRcvBusy := TRUE;
+				END_IF
+			ELSE
+				fbReceive( bExecute := FALSE );
+				IF NOT fbReceive.bBusy THEN
+					// after reciving command
+					bRcvBusy := FALSE;
+					IF NOT fbReceive.bError THEN
+						IF (fbReceive.nRecBytes > 0) THEN(* Bytes received *)
+							TON_PollTimer( IN := FALSE, PT := T#0S ); (* Bytes received => increase the read (polling) speed *)
+							TON_ResponseTimer.IN := FALSE;(* Bytes received => disable timeout check *)
+							cbReceived 	:= cbReceived + fbReceive.nRecBytes;(* Calculate the number of received data bytes *)
+
+							REPEAT
+								
+								(* Search for string end delimiter *)
+								nLenOfString := 0;(* Reset string length *)
+								bEndOfString := FALSE;
+								REPEAT 
+									IF rxBuffer[nLenOfString] = 0 THEN(* String end delimiter found *)
+										bEndOfString := TRUE;
+									END_IF
+									nLenOfString := nLenOfString + 1;
+								UNTIL bEndOfString OR (nLenOfString >= cbReceived)
+								END_REPEAT
+								
+								IF bEndOfString OR (nLenOfString >= cbReceived) THEN
+									MEMSET( ADR( sRxFrame ), 16#0, SIZEOF( sRxFrame ) );
+									MEMCPY(  ADR( sRxFrame ), ADR( rxBuffer ), MIN( SIZEOF(sRxFrame), nLenOfString ) );(* Copy the received string to the output variable (inclusive the end delimiter) *)
+									MEMMOVE( ADR( rxBuffer ), ADR( rxBuffer[nLenOfString] ), cbReceived - nLenOfString  );(* Move the reamaining data bytes *)
+									cbReceived := cbReceived - nLenOfString;(* Recalculate the reamaining data byte length *)
+			
+									fbRx.AddTail( sPut := sRxFrame );(* Put received message to the rx fifo *)
+									IF NOT fbRx.bOk THEN
+
+										bDisconnect := TRUE;(* Set flag *)
+										RETURN;
+									END_IF
+								END_IF
+								
+							UNTIL NOT bEndOfString OR (cbReceived = 0)
+							END_REPEAT
+		
+						ELSE(* No bytes received: reciving finished or timeout*)
+							IF TON_ResponseTimer.Q THEN (* Timeout error*)
+								StartPolling 	:= FALSE;
+								MemFirstFrame	:= FALSE;	
+								
+								TON_ResponseTimer.IN := FALSE;
+								
+								bDisconnect := TRUE;(* Set flag *)
+							END_IF
+						END_IF
+						
+					ELSE(* Receive error *)
+						StartPolling 	:= FALSE;
+						MemFirstFrame	:= FALSE;
+						bRcvBusy 		:= FALSE;
+												
+						bDisconnect := TRUE;(* Set flag *)
+					END_IF
+				END_IF(* IF NOT fbReceive.bBusy THEN *)
+				
+			END_IF(* IF NOT bDisconnect AND NOT bRcvBusy THEN *)
+		
+		END_IF(* IF bDisconnect AND NOT bSndBusy AND NOT bRcvBusy THEN *)
+
+(* DISCONNECT *)		
+	eCONNECTION_STATE_CLOSE_START:
+		
+		TON_PollTimer.IN := FALSE;
+		TON_ResponseTimer.IN := FALSE;
+		//bForceRecive	:= FALSE;
+		
+		fbClose( bExecute := FALSE );
+		fbClose( sSrvNetID := sSrvNetID, 
+					hSocket:= fbConnect.hSocket, 
+					bExecute:= TRUE );
+		eStep := eCONNECTION_STATE_CLOSE_WAIT;
+
+	eCONNECTION_STATE_CLOSE_WAIT:
+		fbClose( bExecute := FALSE );
+		IF NOT fbClose.bBusy THEN
+			bConnected := FALSE;
+			IF NOT fbClose.bError THEN
+				eStep := eCONNECTION_STATE_IDLE;
+			ELSE
+				
+				eStep := eCONNECTION_STATE_ERROR;
+			END_IF
+		END_IF
+
+	eCONNECTION_STATE_ERROR:(* Error step *)
+		IF bConnected THEN
+			eStep := eCONNECTION_STATE_CLOSE_START;
+		ELSE
+			eStep := eCONNECTION_STATE_IDLE;
+		END_IF
+END_CASE
+RxBusy := MemFirstFrame;
+]]></ST>
+    </Implementation>
+    <Method Name="ForceRecive" Id="{82da2406-734f-4ae2-b56b-74cf2d7fc404}">
+      <Declaration><![CDATA[METHOD ForceRecive : BOOL
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TON_ResponseTimer.IN := TRUE;
+StartPolling	:= TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_ClientConnection">
+      <LineId Id="1249" Count="216" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientConnection.ForceRecive">
+      <LineId Id="9" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

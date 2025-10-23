@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_HMI_MesManual" Id="{af5c8935-0a13-4f90-a39e-93c5146cd36c}">
+    <Declaration><![CDATA[TYPE DUT_HMI_MesManual :
+STRUCT
+	PS : BOOL;
+	LS : BOOL;
+	Data : STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

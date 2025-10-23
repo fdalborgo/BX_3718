@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FC_BYTE_TO_BOOLBYTE" Id="{a8aa1d18-1612-476e-b910-0910d2267711}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_BYTE_TO_BOOLBYTE : ARRAY[0..7] OF BOOL
+VAR_INPUT
+	myByte : REFERENCE TO BYTE;
+END_VAR
+VAR
+    i : USINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[FOR i := 0 TO 7 DO
+    FC_BYTE_TO_BOOLBYTE[i] := (myByte AND (SHL(1,i))) <> 0;
+END_FOR
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_BYTE_TO_BOOLBYTE">
+      <LineId Id="166" Count="1" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="151" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

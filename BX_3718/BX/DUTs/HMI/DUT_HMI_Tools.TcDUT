@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_HMI_Tools" Id="{aee45b7e-2610-4f37-a90c-6d783240e9bb}">
+    <Declaration><![CDATA[TYPE DUT_HMI_Tools :
+STRUCT
+	TaskManager			: BOOL; // Open Windows Task Manager program
+	CNCScreenDisplay 	: BOOL; // Open Fancu CNC Screen Display program
+	ProgramTransferTool : BOOL; // Open Fanuc Program Transfer Tool program
+	OnScreenKeyboard	: BOOL; // Open On Screen Kryboard tool
+	CloseBrowser		: BOOL; // Close browser and HMI application
+	FanucLadder			: BOOL; // Open Fanuc Ladder program
+	FlyCad				: BOOL; // Open Lasit FlyCad software
+	OpenPage			: BOOL; // Open tools page
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

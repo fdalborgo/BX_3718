@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_AppendBatchToProductionQueue" Id="{c89587fd-1c23-4eec-bcac-552f2ca43efb}">
+    <Declaration><![CDATA[TYPE DUT_AppendBatchToProductionQueue :
+STRUCT
+	return_					: DINT;
+	BatchInfoJson			: STRING(DB.MAX_STRING_SIZE);
+	BatchItemsJson			: STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

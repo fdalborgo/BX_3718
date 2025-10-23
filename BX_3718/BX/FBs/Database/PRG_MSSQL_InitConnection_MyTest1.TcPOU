@@ -1,0 +1,147 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="PRG_MSSQL_InitConnection_MyTest1" Id="{271a0001-4853-40b1-85f4-97f92818a794}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_MSSQL_InitConnection_MyTest1
+VAR_INPUT
+	Enable			: BOOL;
+	DBID			: UDINT;
+	tRetryConn		: TIME;
+	pSQLStoredProcedureEvt	: POINTER TO FB_SQLStoredProcedureEvt;
+END_VAR
+VAR_OUTPUT
+	Error			: BOOL;
+	ErrorID			: UINT;
+	Connected		: BOOL;
+END_VAR
+VAR
+	TON_DelayStartConnection : TON;
+	fbSQLDatabaseEvt	: FB_SQLDatabaseEvt(sNetID := '', tTimeout := T#5S);
+	iState				: INT := -1;
+	RTRIG_Enable		: R_TRIG;
+	FTRIG_Enable		: F_TRIG;
+	TON_RetryConnection : TON;
+	SQLSPParameterSize1		: ARRAY[0..0] OF ST_SQLSPParameter;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Enable(CLK := Enable);
+FTRIG_Enable(CLK := Enable);
+
+TON_RetryConnection(IN := iState = 5,PT := tRetryConn);
+IF(RTRIG_Enable.Q) THEN
+	IF iState = 999 THEN
+		iState							:= 2;			// -> Connect	
+	ELSE
+		iState							:= 0;			// -> Connect	
+	END_IF
+
+	
+	ErrorID						:= 0;
+ELSIF(FTRIG_Enable.Q) THEN	
+	
+	ErrorID						:= 0;
+	iState							:= 990;			// -> Disconnect			
+END_IF
+
+
+TON_DelayStartConnection(IN := iState = 0, PT := T#1m);
+CASE iState OF
+	-1:
+		Connected := FALSE;
+		
+	0:
+		IF TON_DelayStartConnection.Q THEN
+			
+			iState								:= 2;
+		END_IF
+		
+	 2:
+// Connection 
+		Connected := FALSE;
+		fbSQLDatabaseEvt.Connect(DBID);
+		IF(fbSQLDatabaseEvt.bConnected) THEN
+			
+			iState								:= 10;
+		ELSIF(fbSQLDatabaseEvt.bError) THEN
+			Error 						:= TRUE;
+			ErrorID						:= 1001;
+			
+			iState								:= 5;
+		END_IF
+		
+	5:	
+// Wait time before retry
+		IF(TON_RetryConnection.Q) THEN
+			ErrorID						:= 0;
+			
+			iState								:= 2;
+		END_IF
+		
+	10:
+		SQLSPParameterSize1[0].sParameterName := '@return';
+		SQLSPParameterSize1[0].eParameterType := E_SPParameterType.ReturnValue;
+		SQLSPParameterSize1[0].eParameterDataType := E_ColumnType.Integer;
+		SQLSPParameterSize1[0].nParameterSize := SIZEOF(DINT);
+		IF fbSQLDatabaseEvt.CreateSP('[dbo].[_TASK2]', ADR(SQLSPParameterSize1), SIZEOF(SQLSPParameterSize1), pSQLStoredProcedureEvt) THEN	
+			IF fbSQLDatabaseEvt.bError THEN
+    	
+				iState							:=1010;
+			ELSE
+				
+				iState							:= 980;
+			END_IF
+		END_IF	
+	
+// Connected output state
+	980:
+		IF fbSQLDatabaseEvt.bConnected THEN
+			 Connected := TRUE;
+		END_IF
+
+// Disconnected output state		
+	990:
+		IF(fbSQLDatabaseEvt.Disconnect()) THEN
+			Connected := FALSE;
+			IF fbSQLDatabaseEvt.bError THEN
+				Error						:= TRUE;
+				ErrorID						:= 1003;
+			ELSE
+				
+				iState							:= 999;
+			END_IF
+		END_IF
+
+// Wait for disconnection		
+	999:
+		;
+END_CASE
+
+
+
+
+IF iState > 1000 THEN
+	Error := TRUE;
+ELSE
+	Error := FALSE;
+END_IF
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="PRG_MSSQL_InitConnection_MyTest1">
+      <LineId Id="5405" Count="4" />
+      <LineId Id="8147" Count="1" />
+      <LineId Id="8151" Count="1" />
+      <LineId Id="8149" Count="0" />
+      <LineId Id="5410" Count="13" />
+      <LineId Id="8055" Count="1" />
+      <LineId Id="8059" Count="0" />
+      <LineId Id="8062" Count="1" />
+      <LineId Id="8061" Count="0" />
+      <LineId Id="5424" Count="23" />
+      <LineId Id="9673" Count="12" />
+      <LineId Id="7784" Count="0" />
+      <LineId Id="5924" Count="32" />
+      <LineId Id="1486" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

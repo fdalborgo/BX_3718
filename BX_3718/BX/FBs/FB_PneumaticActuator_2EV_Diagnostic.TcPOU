@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FB_PneumaticActuator_2EV_Diagnostic" Id="{acfee769-7e28-4cbf-b79a-f36f16fbfd1f}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_PneumaticActuator_2EV_Diagnostic
+VAR_INPUT
+	I_bCmdFwd					: BOOL;		// Comando avanti
+	I_bCmdBwd					: BOOL;		// Comando indietro
+	I_bSensorFwd				: BOOL;		// Sensore avanti
+	I_bSensorBwd				: BOOL;		// Sensore indietro
+END_VAR
+
+VAR_OUTPUT
+	Q_tElapsedTimeFwd			: UINT := 0;			// Durata movimento avanti
+	Q_tElapsedTimeBwd			: UINT := 0;			// Durata movimento indietro
+	//Q_tLastFwd					: UINT := 0;			// Durata ultimo movimento avanti
+	//Q_tLastBwd					: UINT := 0;			// Durata ultimo movimento indietro
+	Q_eStatus					: eEV_Status := eEV_Status.NotUsed; // Descrizione stato funzione
+END_VAR
+
+VAR
+	_TON_TimerFwd				: TON;
+	_TON_TimerBwd				: TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[_TON_TimerFwd(IN := I_bCmdFwd AND NOT I_bSensorFwd, PT := T#99S);					
+_TON_TimerBwd(IN := I_bCmdBwd AND NOT I_bSensorBwd, PT := T#99S);	
+
+// Elapsed Time	
+IF _TON_TimerBwd.IN THEN
+	Q_tElapsedTimeBwd := TIME_TO_UINT(_TON_TimerBwd.ET);
+END_IF
+IF _TON_TimerFwd.IN THEN
+	Q_tElapsedTimeFwd := TIME_TO_UINT(_TON_TimerFwd.ET);
+END_IF
+//IF I_bSensorFwd THEN
+//	Q_tLastFwd := Q_tElapsedTimeFwd;
+//ELSIF I_bSensorBwd THEN
+//	Q_tLastBwd := Q_tElapsedTimeBwd;
+//END_IF	
+	
+// Status
+IF I_bCmdFwd AND NOT I_bSensorFwd THEN
+	Q_eStatus := eEV_Status.MovingForward;
+END_IF
+IF I_bCmdBwd AND NOT I_bSensorBwd THEN
+	Q_eStatus := eEV_Status.MovingBackward;
+END_IF											
+IF (Q_eStatus = eEV_Status.MovingBackward AND I_bSensorBwd) OR (Q_eStatus = eEV_Status.MovingForward AND I_bSensorFwd) THEN
+	Q_eStatus := eEV_Status.MoveCompleted;
+END_IF	
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_PneumaticActuator_2EV_Diagnostic">
+      <LineId Id="3" Count="3" />
+      <LineId Id="54" Count="2" />
+      <LineId Id="58" Count="1" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="50" Count="3" />
+      <LineId Id="48" Count="1" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="16" Count="11" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_StationData" Id="{81daf909-e542-4130-9508-8c997a67c12b}">
+    <Declaration><![CDATA[TYPE DUT_StationData :
+STRUCT
+	FlagP_B0 : BYTE;
+	FlagP_B1 : BYTE;
+	FlagP_B2 : BYTE;
+	FlagP_B3 : BYTE;
+	FlagP_B4 : BYTE;
+	FlagP_B5 : BYTE;
+	RunP_B0  : BYTE;
+	RunP_B1  : BYTE;
+	RunP_B2  : BYTE;
+	RunP_B3  : BYTE;
+	WidP_B0  : BYTE;
+	WidP_B1  : BYTE;
+	WidP_B2  : BYTE;
+	WidP_B3  : BYTE;
+	NppP_B0  : BYTE;
+	NppP_B1  : BYTE;
+	NppP_B2  : BYTE;
+	NppP_B3  : BYTE;
+	State    : BYTE;
+	Byte_19  : BYTE;		
+	Byte_20  : BYTE;		
+	Byte_21  : BYTE;		
+	Byte_22  : BYTE;		
+	Byte_23  : BYTE;		
+	Byte_24  : BYTE;		
+	Byte_25  : BYTE;		
+	Byte_26  : BYTE;		
+	Byte_27  : BYTE;		
+	Byte_28  : BYTE;		
+	Byte_29  : BYTE;		
+	Byte_30  : BYTE;		
+	Byte_31  : BYTE;		
+	Byte_32  : BYTE;		
+	Byte_33  : BYTE;		
+	Byte_34  : BYTE;		
+	Byte_35  : BYTE;		
+	Byte_36  : BYTE;		
+	Byte_37  : BYTE;		
+	Byte_38  : BYTE;		
+	Byte_39  : BYTE;		
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

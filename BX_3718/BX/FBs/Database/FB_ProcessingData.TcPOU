@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_ProcessingData" Id="{611f441b-128a-4bfb-b848-9ee287205a18}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ProcessingData
+VAR_INPUT
+	PMCShiftManData 	 : stShiftData;
+	NumStation		 : UINT;
+	StationOne		 : BOOL; 
+	FirstStation	 : BOOL;
+	UnloadingStation : BOOL;
+	Trigger			 : BOOL;
+	ProductStatus 	: eProductStatus;
+END_VAR
+VAR_OUTPUT
+	stProcessingData	: DUT_stProcessingData;
+END_VAR
+VAR
+	RTRIG_Processing	: R_TRIG;
+	RTRIG_Completed	: R_TRIG;
+	RTRIG_Scraped	: R_TRIG;
+	RTRIG_Trigger	: R_TRIG;
+	StartCopy : BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Processing(CLK:= ProductStatus = eProductStatus.Working AND PMCShiftManData.WIDP > 0);
+RTRIG_Completed(CLK:= ProductStatus = eProductStatus.Completed AND PMCShiftManData.WIDP > 0);
+RTRIG_Scraped(CLK:= ProductStatus = eProductStatus.Scraped AND PMCShiftManData.WIDP > 0);
+RTRIG_Trigger(CLK:= Trigger);
+IF PMCShiftManData.WIDP > 0 THEN
+	IF RTRIG_Processing.Q THEN
+		StartCopy := TRUE;
+		stProcessingData.ProcessingStartedAt := FC_DT_TO_ISO8610(G.SystemTime);
+		stProcessingData.StatusId := eDbPiecesStatus.Processing;
+	END_IF
+	IF RTRIG_Completed.Q THEN
+		stProcessingData.ProcessingEndedAt := FC_DT_TO_ISO8610(G.SystemTime);
+		stProcessingData.StatusId := eDbPiecesStatus.Completed;
+	END_IF		
+	IF RTRIG_Scraped.Q THEN
+		stProcessingData.ProcessingEndedAt := FC_DT_TO_ISO8610(G.SystemTime);
+		stProcessingData.StatusId := eDbPiecesStatus.Scrap;
+	END_IF	
+	IF stProcessingData.StatusId <> eDbPiecesStatus.Fetched AND stProcessingData.StatusId <> eDbPiecesStatus.Processing AND stProcessingData.StatusId <> eDbPiecesStatus.Completed AND stProcessingData.StatusId <> eDbPiecesStatus.Scrap THEN
+		IF ProductStatus = eProductStatus.NotPresent THEN
+			stProcessingData.StatusId := eDbPiecesStatus.Undefined;
+		ELSIF ProductStatus = eProductStatus.Present THEN
+			stProcessingData.StatusId := eDbPiecesStatus.Undefined;
+		ELSE
+			stProcessingData.StatusId := eDbPiecesStatus.Undefined;
+		END_IF		
+	END_IF
+	
+	IF FirstStation THEN
+		stProcessingData.StatusId := eDbPiecesStatus.Fetched;
+	END_IF
+	IF StationOne THEN
+		stProcessingData.StatusId := eDbPiecesStatus.Processing;
+	END_IF
+ELSIF NOT StartCopy THEN
+	stProcessingData.StatusId := eDbPiecesStatus.Undefined;
+	stProcessingData.ProcessingStartedAt := '';
+	stProcessingData.ProcessingEndedAt := '';
+END_IF
+stProcessingData.LocationId := NumStation;
+stProcessingData.PartId := PMCShiftManData.WIDP;
+stProcessingData.Status := TO_STRING(stProcessingData.StatusId);
+stProcessingData.DefectId := 0;
+stProcessingData.Defect := '';
+stProcessingData.IsInitialUpdate := SEL(FirstStation AND PMCShiftManData.WIDP > 0,'False','True');
+stProcessingData.IsFinalUpdate := SEL(UnloadingStation AND PMCShiftManData.WIDP > 0,'False','True');
+
+
+IF RTRIG_Trigger.Q THEN
+	StartCopy := FALSE;
+END_IF
+		]]></ST>
+    </Implementation>
+    <LineIds Name="FB_ProcessingData">
+      <LineId Id="1203" Count="1" />
+      <LineId Id="1202" Count="0" />
+      <LineId Id="1280" Count="0" />
+      <LineId Id="1215" Count="0" />
+      <LineId Id="1281" Count="11" />
+      <LineId Id="1267" Count="1" />
+      <LineId Id="1271" Count="5" />
+      <LineId Id="1269" Count="1" />
+      <LineId Id="1229" Count="0" />
+      <LineId Id="1158" Count="5" />
+      <LineId Id="1173" Count="1" />
+      <LineId Id="1321" Count="0" />
+      <LineId Id="1320" Count="0" />
+      <LineId Id="1175" Count="7" />
+      <LineId Id="1300" Count="0" />
+      <LineId Id="1294" Count="0" />
+      <LineId Id="1293" Count="0" />
+      <LineId Id="1295" Count="1" />
+      <LineId Id="952" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_stSPAlarm" Id="{dcd8db16-76ff-415f-b45a-e972c4d6f9c3}">
+    <Declaration><![CDATA[TYPE DUT_stSPAlarm :
+STRUCT
+	Error : BOOL;
+	ErrorID : DINT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

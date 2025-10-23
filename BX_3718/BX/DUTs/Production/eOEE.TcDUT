@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="eOEE" Id="{fd31a4a8-4a81-45e0-b846-8ea6ce2d0af7}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE eOEE :
+(
+	Downtime 	:= 0,
+	Uptime	 	:= 1,
+	Pause		:= 2,
+	Completed	:= 3
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_UnloadManager" Id="{fc94d719-39da-471c-8609-c5475ec7f060}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_UnloadManager
+VAR_IN_OUT
+	UnloadingStation : BOOL;
+	FLAGP : stByteAsBit;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[UnloadingStation := TRUE;
+IF FC_ProductStatus(FLAGP) <> eProductStatus.Scraped THEN
+	FLAGP.aByte := 0;
+	FLAGP.aBit.b0 := 1;
+	FLAGP.aBit.b3 := 1;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FC_UnloadManager">
+      <LineId Id="92" Count="0" />
+      <LineId Id="257" Count="3" />
+      <LineId Id="256" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

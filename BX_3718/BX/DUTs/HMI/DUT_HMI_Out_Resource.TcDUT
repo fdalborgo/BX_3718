@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_HMI_Out_Resource" Id="{d33f3e2c-1726-44f5-842b-e4fe9eaf20d1}">
+    <Declaration><![CDATA[TYPE DUT_HMI_Out_Resource :
+STRUCT
+	Origin : DUT_OutInfoOrigin;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

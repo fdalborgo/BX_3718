@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FanucCNCEventDetails" Id="{24b7c173-ec86-41c3-a846-fe2335fe8c18}">
+    <Declaration><![CDATA[TYPE ST_FanucCNCEventDetails :
+STRUCT
+	AxesMask : ST_FanucCNCEventAxesMask;
+	Category : BYTE;
+	No : UINT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_stMesOrder" Id="{59a0681e-f27c-4d84-b58c-8ddd27cb788d}">
+    <Declaration><![CDATA[TYPE DUT_stMesOrder :
+STRUCT
+	return_			: DINT;
+	StatusFilter	: STRING(50);
+	OrderListJson	: STRING(DB.MAX_STRING_SIZE);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

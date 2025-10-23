@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="eDbPiecesStatus" Id="{71a8029b-e5b3-475a-bc04-d5b6d716bbd7}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE eDbPiecesStatus :
+(
+	Scrap 		:= -1,
+	Undefined	:= 0,
+	Fetched		:= 1,
+	Processing	:= 2,
+	Completed	:= 3
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

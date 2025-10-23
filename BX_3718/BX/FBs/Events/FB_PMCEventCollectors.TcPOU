@@ -1,0 +1,1010 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_PMCEventCollectors" Id="{8bd1f9ef-872e-4734-8023-d4d316c525ac}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_PMCEventCollectors IMPLEMENTS I_EventDetailer
+VAR
+
+	//{attribute 'hide'}
+	_Enabled : BOOL;
+
+	{attribute 'hide'}
+	_CheckInterval : TIME;
+	
+	{attribute 'hide'}
+	_CheckTimer : TON;
+	
+	//{attribute 'hide'}
+	_CurrentPMCActiveAlarmList : REFERENCE TO ARRAY [0..NUM_PMC_EVENTS / 8 - 1] OF BYTE;
+
+	//{attribute 'hide'}
+	_CurrentPMCActiveAlarmListCopy : ARRAY [0..NUM_PMC_EVENTS / 8 - 1] OF BYTE;
+
+	//{attribute 'hide'}
+	_PreviousPMCActiveAlarmList : ARRAY [0..NUM_PMC_EVENTS / 8 - 1] OF BYTE;
+
+	// ###### ALARMS #####
+
+	// PMC General Alarms 
+	_CheckFanucPMCActiveAlarmList_Gen_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 0,
+						ByteLength := 60,
+						SourceId := 99,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.AlrGeneral),
+						EventDetailer := THIS^
+						);
+	
+	// PMC St.0 (Manipulator) Alarms 
+	_CheckFanucPMCActiveAlarmList_St00_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 60,
+						ByteLength := 40,
+						SourceId := 100,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr00),
+						EventDetailer := THIS^
+						);
+	
+	// PMC St.1 Alarms 
+	_CheckFanucPMCActiveAlarmList_St01_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 100,
+						ByteLength := 10,
+						SourceId := 101,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr01),
+						EventDetailer := THIS^
+						);
+	
+	// PMC St.2 Alarms 
+	_CheckFanucPMCActiveAlarmList_St02_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 110,
+						ByteLength := 10,
+						SourceId := 102,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr02),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.3 Alarms 
+	_CheckFanucPMCActiveAlarmList_St03_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 120,
+						ByteLength := 10,
+						SourceId := 103,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr03),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.4 Alarms 
+	_CheckFanucPMCActiveAlarmList_St04_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 130,
+						ByteLength := 10,
+						SourceId := 104,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr04),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.5 Alarms 
+	_CheckFanucPMCActiveAlarmList_St05_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 140,
+						ByteLength := 10,
+						SourceId := 105,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr05),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.6 Alarms 
+	_CheckFanucPMCActiveAlarmList_St06_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 150,
+						ByteLength := 10,
+						SourceId := 106,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr06),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.7 Alarms 
+	_CheckFanucPMCActiveAlarmList_St07_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 160,
+						ByteLength := 10,
+						SourceId := 107,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr07),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.8 Alarms 
+	_CheckFanucPMCActiveAlarmList_St08_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 170,
+						ByteLength := 10,
+						SourceId := 108,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr08),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.9 Alarms 
+	_CheckFanucPMCActiveAlarmList_St09_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 180,
+						ByteLength := 10,
+						SourceId := 109,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr09),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.10 Alarms 
+	_CheckFanucPMCActiveAlarmList_St10_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 190,
+						ByteLength := 10,
+						SourceId := 110,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr10),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.11 Alarms 
+	_CheckFanucPMCActiveAlarmList_St11_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 200,
+						ByteLength := 10,
+						SourceId := 111,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr11),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.12 Alarms 
+	_CheckFanucPMCActiveAlarmList_St12_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 210,
+						ByteLength := 10,
+						SourceId := 112,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr12),
+						EventDetailer := THIS^
+						);
+
+	// PMC St.13 Alarms 
+	_CheckFanucPMCActiveAlarmList_St13_Alr : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 220,
+						ByteLength := 10,
+						SourceId := 113,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Alr13),
+						EventDetailer := THIS^
+						);
+
+//	// PMC St.14 Alarms 
+//	_CheckFanucPMCActiveAlarmList_St14_Alr : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 230,
+//						ByteLength := 10,
+//						SourceId := 114,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Alr14),
+//						EventDetailer := THIS^
+//						);
+
+//	// PMC St.15 Alarms 
+//	_CheckFanucPMCActiveAlarmList_St15_Alr : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 240,
+//						ByteLength := 10,
+//						SourceId := 115,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Alr15),
+//						EventDetailer := THIS^
+//						);
+
+//	// PMC St.16 Alarms 
+//	_CheckFanucPMCActiveAlarmList_St16_Alr : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 250,
+//						ByteLength := 10,
+//						SourceId := 116,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Alr16),
+//						EventDetailer := THIS^
+//						);
+
+//	// PMC St.17 Alarms 
+//	_CheckFanucPMCActiveAlarmList_St17_Alr : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 260,
+//						ByteLength := 10,
+//						SourceId := 117,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Alr17),
+//						EventDetailer := THIS^
+//						);
+
+//	// PMC St.18 Alarms 
+//	_CheckFanucPMCActiveAlarmList_St18_Alr : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 270,
+//						ByteLength := 10,
+//						SourceId := 118,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Alr18),
+//						EventDetailer := THIS^
+//						);
+
+//	// PMC St.19 Alarms 
+//	_CheckFanucPMCActiveAlarmList_St19_Alr : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 280,
+//						ByteLength := 10,
+//						SourceId := 119,
+//						SourceName := 'St.19 ALR',
+//						EventClass := ADR(TC_Events.Alr19),
+//						EventDetailer := THIS^
+//						);
+
+						
+	// ###### WARNINGS #####
+
+	// PMC General Warnings
+	_CheckFanucPMCActiveAlarmList_Gen_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 400,
+						ByteLength := 10,
+						SourceId := 99,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.WrnGeneral),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.1
+	_CheckFanucPMCActiveAlarmList_St01_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 410,
+						ByteLength := 2,
+						SourceId := 101,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn01),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.2
+	_CheckFanucPMCActiveAlarmList_St02_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 412,
+						ByteLength := 2,
+						SourceId := 102,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn02),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.3
+	_CheckFanucPMCActiveAlarmList_St03_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 414,
+						ByteLength := 2,
+						SourceId := 103,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn03),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.4
+	_CheckFanucPMCActiveAlarmList_St04_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 416,
+						ByteLength := 2,
+						SourceId := 104,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn04),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.5
+	_CheckFanucPMCActiveAlarmList_St05_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 418,
+						ByteLength := 2,
+						SourceId := 105,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn05),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.6
+	_CheckFanucPMCActiveAlarmList_St06_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 420,
+						ByteLength := 2,
+						SourceId := 106,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn06),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.7
+	_CheckFanucPMCActiveAlarmList_St07_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 422,
+						ByteLength := 2,
+						SourceId := 107,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn07),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.8
+	_CheckFanucPMCActiveAlarmList_St08_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 424,
+						ByteLength := 2,
+						SourceId := 108,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn08),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.9
+	_CheckFanucPMCActiveAlarmList_St09_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 426,
+						ByteLength := 2,
+						SourceId := 109,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn09),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.10
+	_CheckFanucPMCActiveAlarmList_St10_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 428,
+						ByteLength := 2,
+						SourceId := 110,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn10),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.11
+	_CheckFanucPMCActiveAlarmList_St11_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 430,
+						ByteLength := 2,
+						SourceId := 111,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn11),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.12
+	_CheckFanucPMCActiveAlarmList_St12_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 432,
+						ByteLength := 2,
+						SourceId := 112,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn12),
+						EventDetailer := THIS^
+						);
+	
+	// PMC Warnings St.13
+	_CheckFanucPMCActiveAlarmList_St13_Wrn : FB_CheckFanucPMCActiveEvents (
+						CheckInterval := T#0S, 
+						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+						StartByte := 434,
+						ByteLength := 2,
+						SourceId := 113,
+						SourceName := 'PMC',
+						EventClass := ADR(TC_Events.Wrn13),
+						EventDetailer := THIS^
+						);
+	
+//	// PMC Warnings St.14
+//	_CheckFanucPMCActiveAlarmList_St14_Wrn : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 436,
+//						ByteLength := 2,
+//						SourceId := 114,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Wrn14),
+//						EventDetailer := THIS^
+//						);
+	
+//	// PMC Warnings St.15
+//	_CheckFanucPMCActiveAlarmList_St15_Wrn : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 438,
+//						ByteLength := 2,
+//						SourceId := 115,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Wrn15),
+//						EventDetailer := THIS^
+//						);
+	
+//	// PMC Warnings St.16
+//	_CheckFanucPMCActiveAlarmList_St16_Wrn : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 440,
+//						ByteLength := 2,
+//						SourceId := 116,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Wrn16),
+//						EventDetailer := THIS^
+//						);
+	
+//	// PMC Warnings St.17
+//	_CheckFanucPMCActiveAlarmList_St17_Wrn : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 442,
+//						ByteLength := 2,
+//						SourceId := 117,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Wrn17),
+//						EventDetailer := THIS^
+//						);
+	
+//	// PMC Warnings St.18
+//	_CheckFanucPMCActiveAlarmList_St18_Wrn : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := _CurrentPMCActiveAlarmListCopy,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 444,
+//						ByteLength := 2,
+//						SourceId := 118,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Wrn18),
+//						EventDetailer := THIS^
+//						);
+	
+//	// PMC Warnings St.19
+//	_CheckFanucPMCActiveAlarmList_St19_Wrn : FB_CheckFanucPMCActiveEvents (
+//						CheckInterval := T#0S, 
+//						CurrentPMCActiveAlarmList := v,
+//						PreviousPMCActiveAlarmList := _PreviousPMCActiveAlarmList,
+//						StartByte := 446,
+//						ByteLength := 2,
+//						SourceId := 119,
+//						SourceName := 'PMC',
+//						EventClass := ADR(TC_Events.Wrn19),
+//						EventDetailer := THIS^
+//						);
+	
+
+						
+	// TODO: comment out
+	_Gen_Alr  AT %MB600:  ARRAY [0..59] OF BYTE;
+	_St00_Alr AT %MB660:  ARRAY [0..39] OF BYTE;
+	_St01_Alr AT %MB700:  ARRAY [0..9] OF BYTE;
+	_St02_Alr AT %MB710:  ARRAY [0..9] OF BYTE;
+	_St03_Alr AT %MB720:  ARRAY [0..9] OF BYTE;
+	_St04_Alr AT %MB730:  ARRAY [0..9] OF BYTE;
+	_St05_Alr AT %MB740:  ARRAY [0..9] OF BYTE;
+	_St06_Alr AT %MB750:  ARRAY [0..9] OF BYTE;
+	_St07_Alr AT %MB760:  ARRAY [0..9] OF BYTE;
+	_St08_Alr AT %MB770:  ARRAY [0..9] OF BYTE;
+	_St09_Alr AT %MB780:  ARRAY [0..9] OF BYTE;
+	_St10_Alr AT %MB790:  ARRAY [0..9] OF BYTE;
+	_St11_Alr AT %MB800:  ARRAY [0..9] OF BYTE;
+	_St12_Alr AT %MB810:  ARRAY [0..9] OF BYTE;
+	_St13_Alr AT %MB820:  ARRAY [0..9] OF BYTE;
+//	_St14_Alr AT %MB830:  ARRAY [0..9] OF BYTE;
+//	_St15_Alr AT %MB840:  ARRAY [0..9] OF BYTE;
+//	_St16_Alr AT %MB850:  ARRAY [0..9] OF BYTE;
+//	_St17_Alr AT %MB860:  ARRAY [0..9] OF BYTE;
+//	_St18_Alr AT %MB870:  ARRAY [0..9] OF BYTE;
+//	_St19_Alr AT %MB880:  ARRAY [0..9] OF BYTE;
+                         
+	_Gen_Wrn  AT %MB1000: ARRAY [0..9] OF BYTE;
+	_St01_Wrn AT %MB1010: ARRAY [0..1] OF BYTE;
+	_St02_Wrn AT %MB1012: ARRAY [0..1] OF BYTE;
+	_St03_Wrn AT %MB1014: ARRAY [0..1] OF BYTE;
+	_St04_Wrn AT %MB1016: ARRAY [0..1] OF BYTE;
+	_St05_Wrn AT %MB1018: ARRAY [0..1] OF BYTE;
+	_St06_Wrn AT %MB1020: ARRAY [0..1] OF BYTE;
+	_St07_Wrn AT %MB1022: ARRAY [0..1] OF BYTE;
+	_St08_Wrn AT %MB1024: ARRAY [0..1] OF BYTE;
+	_St09_Wrn AT %MB1026: ARRAY [0..1] OF BYTE;
+	_St10_Wrn AT %MB1028: ARRAY [0..1] OF BYTE;
+	_St11_Wrn AT %MB1030: ARRAY [0..1] OF BYTE;
+	_St12_Wrn AT %MB1032: ARRAY [0..1] OF BYTE;
+	_St13_Wrn AT %MB1034: ARRAY [0..1] OF BYTE;
+//	_St14_Wrn AT %MB1036: ARRAY [0..1] OF BYTE;
+//	_St15_Wrn AT %MB1038: ARRAY [0..1] OF BYTE;
+//	_St16_Wrn AT %MB1040: ARRAY [0..1] OF BYTE;
+//	_St17_Wrn AT %MB1042: ARRAY [0..1] OF BYTE;
+//	_St18_Wrn AT %MB1044: ARRAY [0..1] OF BYTE;
+//	_St19_Wrn AT %MB1046: ARRAY [0..1] OF BYTE;
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[_CheckTimer();
+
+IF Enabled  AND (_CheckInterval > T#0MS) THEN
+	IF _CheckTimer.Q THEN
+		// Freeze current list into local copy to avoid concurrency problems with ADS
+		MEMCPY(ADR(_CurrentPMCActiveAlarmListCopy), ADR(_CurrentPMCActiveAlarmList), NUM_PMC_EVENTS / 8);
+		// Update all
+		UpdateActiveEventList();
+		_CheckTimer.IN := FALSE;
+	ELSE
+		_CheckTimer.IN := TRUE;
+	END_IF
+ELSE
+	_CheckTimer.IN := FALSE;
+END_IF
+
+
+// Alarms (cyclic call)
+_CheckFanucPMCActiveAlarmList_Gen_Alr();
+_CheckFanucPMCActiveAlarmList_St00_Alr();
+_CheckFanucPMCActiveAlarmList_St01_Alr();
+_CheckFanucPMCActiveAlarmList_St02_Alr();
+_CheckFanucPMCActiveAlarmList_St03_Alr();
+_CheckFanucPMCActiveAlarmList_St04_Alr();
+_CheckFanucPMCActiveAlarmList_St05_Alr();
+_CheckFanucPMCActiveAlarmList_St06_Alr();
+_CheckFanucPMCActiveAlarmList_St07_Alr();
+_CheckFanucPMCActiveAlarmList_St08_Alr();
+_CheckFanucPMCActiveAlarmList_St09_Alr();
+_CheckFanucPMCActiveAlarmList_St10_Alr();
+_CheckFanucPMCActiveAlarmList_St11_Alr();
+_CheckFanucPMCActiveAlarmList_St12_Alr();
+_CheckFanucPMCActiveAlarmList_St13_Alr();
+//_CheckFanucPMCActiveAlarmList_St14_Alr();
+//_CheckFanucPMCActiveAlarmList_St15_Alr();
+//_CheckFanucPMCActiveAlarmList_St16_Alr();
+//_CheckFanucPMCActiveAlarmList_St17_Alr();
+//_CheckFanucPMCActiveAlarmList_St18_Alr();
+//_CheckFanucPMCActiveAlarmList_St19_Alr();
+
+// Warnings (cyclic call)
+_CheckFanucPMCActiveAlarmList_Gen_Wrn();
+_CheckFanucPMCActiveAlarmList_St01_Wrn();
+_CheckFanucPMCActiveAlarmList_St02_Wrn();
+_CheckFanucPMCActiveAlarmList_St03_Wrn();
+_CheckFanucPMCActiveAlarmList_St04_Wrn();
+_CheckFanucPMCActiveAlarmList_St05_Wrn();
+_CheckFanucPMCActiveAlarmList_St06_Wrn();
+_CheckFanucPMCActiveAlarmList_St07_Wrn();
+_CheckFanucPMCActiveAlarmList_St08_Wrn();
+_CheckFanucPMCActiveAlarmList_St09_Wrn();
+_CheckFanucPMCActiveAlarmList_St10_Wrn();
+_CheckFanucPMCActiveAlarmList_St11_Wrn();
+_CheckFanucPMCActiveAlarmList_St12_Wrn();
+_CheckFanucPMCActiveAlarmList_St13_Wrn();
+//_CheckFanucPMCActiveAlarmList_St14_Wrn();
+//_CheckFanucPMCActiveAlarmList_St15_Wrn();
+//_CheckFanucPMCActiveAlarmList_St16_Wrn();
+//_CheckFanucPMCActiveAlarmList_St17_Wrn();
+//_CheckFanucPMCActiveAlarmList_St18_Wrn();
+//_CheckFanucPMCActiveAlarmList_St19_Wrn();
+]]></ST>
+    </Implementation>
+    <Property Name="CheckInterval" Id="{a978d648-e7e0-4495-8d5d-45799e7dd6c1}">
+      <Declaration><![CDATA[PROPERTY PUBLIC CheckInterval : TIME]]></Declaration>
+      <Get Name="Get" Id="{8514465c-9160-4cad-834c-f4d19f719f1f}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CheckInterval := _CheckInterval;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{ca45bb18-63ab-4644-9a64-b4af29925ae6}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_CheckTimer.PT := _CheckInterval;
+
+//// Alarms
+//_CheckFanucPMCActiveAlarmList_Gen_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St00_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St01_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St02_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St03_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St04_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St05_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St06_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St07_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St08_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St09_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St10_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St11_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St12_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St13_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St14_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St15_Alr.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St16_Alr.CheckInterval := _CheckInterval;
+////_CheckFanucPMCActiveAlarmList_St17_Alr.CheckInterval := _CheckInterval;
+////_CheckFanucPMCActiveAlarmList_St18_Alr.CheckInterval := _CheckInterval;
+////_CheckFanucPMCActiveAlarmList_St19_Alr.CheckInterval := _CheckInterval;
+
+//// Warnings
+//_CheckFanucPMCActiveAlarmList_Gen_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St01_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St02_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St03_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St04_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St05_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St06_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St07_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St08_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St09_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St10_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St11_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St12_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St13_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St14_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St15_Wrn.CheckInterval := _CheckInterval;
+//_CheckFanucPMCActiveAlarmList_St16_Wrn.CheckInterval := _CheckInterval;
+////_CheckFanucPMCActiveAlarmList_St17_Wrn.CheckInterval := _CheckInterval;
+////_CheckFanucPMCActiveAlarmList_St18_Wrn.CheckInterval := _CheckInterval;
+////_CheckFanucPMCActiveAlarmList_St19_Wrn.CheckInterval := _CheckInterval;
+]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="ClearAll" Id="{555ed533-a534-48d7-b056-52c2b18f69e4}">
+      <Declaration><![CDATA[METHOD PUBLIC ClearAll : BOOL
+VAR
+	_TcEventFilter : FB_TcEventFilter;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Alarms
+_CheckFanucPMCActiveAlarmList_St01_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St02_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St03_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St04_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St05_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St06_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St07_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St08_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St09_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St10_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St11_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St12_Alr.ClearAll();
+_CheckFanucPMCActiveAlarmList_St13_Alr.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St14_Alr.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St15_Alr.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St16_Alr.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St17_Alr.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St18_Alr.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St19_Alr.ClearAll();
+
+// Warnings
+_CheckFanucPMCActiveAlarmList_St01_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St02_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St03_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St04_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St05_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St06_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St07_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St08_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St09_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St10_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St11_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St12_Wrn.ClearAll();
+_CheckFanucPMCActiveAlarmList_St13_Wrn.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St14_Wrn.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St15_Wrn.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St16_Wrn.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St17_Wrn.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St18_Wrn.ClearAll();
+//_CheckFanucPMCActiveAlarmList_St19_Wrn.ClearAll();
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Enabled" Id="{e07df4bc-e36d-4e0a-a7ec-5cc209dd3c5b}">
+      <Declaration><![CDATA[PROPERTY PUBLIC Enabled : BOOL]]></Declaration>
+      <Get Name="Get" Id="{9d19543f-4bf3-4002-97e5-21c2e1b761c4}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Enabled := _Enabled;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{0b4ad096-6088-4e03-bd9e-70b498d89217}">
+        <Declaration><![CDATA[
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_Enabled := Enabled;
+
+// Alarms
+_CheckFanucPMCActiveAlarmList_Gen_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St00_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St01_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St02_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St03_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St04_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St05_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St06_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St07_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St08_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St09_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St10_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St11_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St12_Alr.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St13_Alr.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St14_Alr.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St15_Alr.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St16_Alr.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St17_Alr.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St18_Alr.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St19_Alr.Enabled := _Enabled;
+
+// Warnings
+_CheckFanucPMCActiveAlarmList_Gen_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St01_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St02_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St03_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St04_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St05_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St06_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St07_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St08_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St09_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St10_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St11_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St12_Wrn.Enabled := _Enabled;
+_CheckFanucPMCActiveAlarmList_St13_Wrn.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St14_Wrn.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St15_Wrn.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St16_Wrn.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St17_Wrn.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St18_Wrn.Enabled := _Enabled;
+//_CheckFanucPMCActiveAlarmList_St19_Wrn.Enabled := _Enabled;
+]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="FB_init" Id="{e47472d7-0dfd-4c90-8e94-0c2be3e678c9}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	CheckInterval : TIME;
+	CurrentPMCActiveAlarmList : REFERENCE TO ARRAY [0..NUM_PMC_EVENTS / 8 - 1] OF BYTE;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_CheckInterval := CheckInterval;
+_CheckTimer.PT := _CheckInterval;
+
+IF __ISVALIDREF(CurrentPMCActiveAlarmList) THEN
+	_CurrentPMCActiveAlarmList REF= CurrentPMCActiveAlarmList;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="GetDetail" Id="{971d1134-448d-4af6-be6a-aae2fa952a07}">
+      <Declaration><![CDATA[METHOD GetDetail : STRING(255)
+VAR_INPUT
+	TcAlarm	: REFERENCE TO Tc3_EventLogger.FB_TcAlarm;
+END_VAR
+VAR
+	_Detail : STRING(255);
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Detail := '';
+
+// St.01 Alarms
+IF TcAlarm.EqualsToEventClass(TC_EVENT_CLASSES.Alr01) THEN
+	CASE TcAlarm.nEventId OF
+		0: _Detail := 'This is alarm 0 of St.1';
+		1: _Detail := 'This is alarm 1 of St.1';
+		2: _Detail := 'This is alarm 2 of St.1';
+		3: _Detail := 'This is alarm 3 of St.1';
+		//4: _Detail := Main._CurrentUser.Name;
+		//5: _Detail := GlobalUser.GlobalUser.Name;
+	END_CASE
+END_IF
+
+// St.01 Warnings
+IF TcAlarm.EqualsToEventClass(TC_EVENT_CLASSES.Wrn01) THEN
+	CASE TcAlarm.nEventId OF
+		0: _Detail := 'This is warning 0 of St.1';
+		1: _Detail := 'This is warning 1 of St.1';
+		2: _Detail := 'This is warning 2 of St.1';
+		3: _Detail := 'This is warning 3 of St.1';
+	END_CASE
+END_IF
+
+GetDetail := _Detail;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReSync" Id="{542cd534-675c-4852-8c97-4ab7e4830663}">
+      <Declaration><![CDATA[METHOD PUBLIC ReSync : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Force resynchronization of active events
+//		- Clear all raised events
+//		- Reset previous memory buffer
+//		- Update active event list
+ClearAll();
+MemSet(ADR(_PreviousPMCActiveAlarmList), 0, SIZEOF(_PreviousPMCActiveAlarmList));
+UpdateActiveEventList();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="UpdateActiveEventList" Id="{cb63f3b5-5637-49ad-bb20-884cca5d2fee}">
+      <Declaration><![CDATA[METHOD PUBLIC UpdateActiveEventList : BOOL
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Alarms
+_CheckFanucPMCActiveAlarmList_Gen_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St00_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St01_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St02_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St03_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St04_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St05_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St06_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St07_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St08_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St09_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St10_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St11_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St12_Alr.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St13_Alr.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St14_Alr.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St15_Alr.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St16_Alr.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St17_Alr.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St18_Alr.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St19_Alr.UpdateActiveEventList();
+
+// Warnings
+_CheckFanucPMCActiveAlarmList_Gen_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St01_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St02_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St03_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St04_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St05_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St06_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St07_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St08_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St09_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St10_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St11_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St12_Wrn.UpdateActiveEventList();
+_CheckFanucPMCActiveAlarmList_St13_Wrn.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St14_Wrn.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St15_Wrn.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St16_Wrn.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St17_Wrn.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St18_Wrn.UpdateActiveEventList();
+//_CheckFanucPMCActiveAlarmList_St19_Wrn.UpdateActiveEventList();
+]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_PMCEventCollectors">
+      <LineId Id="3" Count="22" />
+      <LineId Id="670" Count="14" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="42" Count="21" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PMCEventCollectors.CheckInterval.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PMCEventCollectors.CheckInterval.Set">
+      <LineId Id="4" Count="45" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PMCEventCollectors.ClearAll">
+      <LineId Id="3" Count="40" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PMCEventCollectors.Enabled.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PMCEventCollectors.Enabled.Set">
+      <LineId Id="3" Count="45" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PMCEventCollectors.FB_init">
+      <LineId Id="3" Count="4" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PMCEventCollectors.GetDetail">
+      <LineId Id="3" Count="23" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PMCEventCollectors.ReSync">
+      <LineId Id="6" Count="5" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_PMCEventCollectors.UpdateActiveEventList">
+      <LineId Id="3" Count="43" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

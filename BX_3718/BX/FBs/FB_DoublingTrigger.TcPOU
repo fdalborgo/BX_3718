@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_DoublingTrigger" Id="{26d2f773-092c-4fbe-b326-c7e9a0f7749d}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_DoublingTrigger
+VAR_INPUT
+    TriggerIn : BOOL; // Segnale di trigger in ingresso
+END_VAR
+VAR_OUTPUT
+    TriggerOut : BOOL; // Unico segnale di uscita, attivo per 1 ciclo due volte
+END_VAR
+VAR
+    TrigPrev : BOOL;
+	R_TrigIn : R_TRIG;
+    timerDelay : TON;
+    state : INT; // 0 = idle, 1 = primo impulso, 2 = attesa 100ms, 3 = secondo impulso
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[R_TrigIn(CLK := TriggerIn);
+
+// Reset uscita
+TriggerOut := FALSE;
+
+CASE state OF
+    0: // Attesa trigger
+        IF R_TrigIn.Q THEN
+            TriggerOut := TRUE; // Primo impulso
+            timerDelay(IN := TRUE, PT := T#100ms);
+            state := 1;
+        END_IF
+
+    1: // Timer in corso
+        timerDelay(IN := TRUE);
+        IF timerDelay.Q THEN
+            timerDelay(IN := FALSE); // Ferma il timer
+            TriggerOut := TRUE;     // Secondo impulso
+            state := 2;
+        END_IF
+
+    2: // Attendi fine ciclo per tornare idle
+        state := 0;
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="FB_DoublingTrigger">
+      <LineId Id="367" Count="1" />
+      <LineId Id="320" Count="20" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

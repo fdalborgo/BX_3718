@@ -1,0 +1,166 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="PRG_MSSQL_spGetNextPartPLCData" Id="{4cb3a017-89ce-4f31-872e-cd92dc9c48f7}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_MSSQL_spGetNextPartPLCData
+VAR_INPUT
+	Execute					: BOOL;
+	Enable					: BOOL;
+	OtherSPBusy				: BOOL;
+END_VAR
+VAR_OUTPUT
+	Error					: BOOL;
+	ErrorID					: DINT;
+	Done					: BOOL;
+	Busy					: BOOL;
+	tcMessage 				: I_TcMessage;
+	Q_tElapsedTime			: TIME;
+	Buffer					: STRING(DB.MAX_STRING_SIZE);
+	DataGood				: BOOL;
+	Empty					: BOOL;
+END_VAR
+VAR
+	RTRIG_Execute			: R_TRIG;
+	iState					: INT := -1;
+	fbJsonDataType 			: FB_JsonReadWriteDataType;
+	Parameters				: DUT_NextPartPLCData;
+	NumRetry				: USINT;
+	TON_DelayRetry			: TON;
+END_VAR
+VAR_IN_OUT
+	fbSQLResult				: FB_SQLResultEvt;
+	fbSQLStoredProcedure	: FB_SQLStoredProcedureEvt;
+	stPLCData				: DUT_stPLCData;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TON_DelayRetry(IN := iState = 15, PT := T#200MS);
+RTRIG_Execute(CLK := Execute AND Enable);
+IF(RTRIG_Execute.Q) THEN
+	 Done							:= FALSE;
+	 Error							:= FALSE;
+	 ErrorID						:= 0; 
+	 
+	 iState							:= 0;
+ELSIF NOT Execute AND NOT Busy THEN
+	Busy			:= FALSE;
+	Done			:= FALSE;
+	Error			:= FALSE;
+	Empty								:= FALSE;
+	DataGood 							:= FALSE;
+	
+	iState := -1;
+END_IF
+ 
+ CASE iState OF
+ 
+	 0:
+		Busy								:= TRUE;
+		NumRetry							:= 1;
+		IF NOT OtherSPBusy THEN
+			iState 								:= 10;
+		END_IF
+		
+	10:
+		//Buffer := '{"PartId":1,"RowIndex":"1","RunningNo":"1","ProfileName":"D0U12","FamilyName":"1200","PlugType":"3800.9","IsFirstPartInBatch":"1","IsLastPartInBatch":"0","IsFirstPartInRow":"1","IsLastPartInRow":"0","MarkingData":{"LayoutName":"Default","OrderReference":"PRD0000001","ProfileLaser":"D0U12"},"Brushing":"5Pins","BackHole":"No","UnloadingModeId":1,"BroachingPlan":{"PassCount":2,"Pass1BaseBroachingPlan":{"ToolHolderBase_Position":1,"ToolHolderBase_BroachName":"1200","ToolHolderBase_LateralCompensation":0.000,"ToolHolderBase_DepthCompensation":0.000,"ToolHolderBase_AngleCompensation":0.000},"Pass1VariantsBroachingPlan":{"ToolHolderA_Position":24,"ToolHolderA_BroachName":"___A","ToolHolderA_LateralCompensation":0.000,"ToolHolderA_DepthCompensation":0.000,"ToolHolderA_AngleCompensation":0.000,"ToolHolderB_Position":24,"ToolHolderB_BroachName":"___B","ToolHolderB_LateralCompensation":0.000,"ToolHolderB_DepthCompensation":0.000,"ToolHolderB_AngleCompensation":0.000,"ToolHolderC_Position":24,"ToolHolderC_BroachName":"___C","ToolHolderC_LateralCompensation":0.000,"ToolHolderC_DepthCompensation":0.000,"ToolHolderC_AngleCompensation":0.000,"ToolHolderD_Position":2,"ToolHolderD_BroachName":"U7","ToolHolderD_LateralCompensation":0.000,"ToolHolderD_DepthCompensation":0.000,"ToolHolderD_AngleCompensation":0.000,"ToolHolderE_Position":1,"ToolHolderE_BroachName":"U8","ToolHolderE_LateralCompensation":0.000,"ToolHolderE_DepthCompensation":0.000,"ToolHolderE_AngleCompensation":0.000,"ToolHolderF_Position":1,"ToolHolderF_BroachName":"D10","ToolHolderF_LateralCompensation":0.000,"ToolHolderF_DepthCompensation":0.000,"ToolHolderF_AngleCompensation":0.000},"Pass2BaseBroachingPlan":{"ToolHolderBase_Position":24,"ToolHolderBase_BroachName":"____","ToolHolderBase_LateralCompensation":0.000,"ToolHolderBase_DepthCompensation":0.000,"ToolHolderBase_AngleCompensation":0.000},"Pass2VariantsBroachingPlan":{"ToolHolderA_Position":2,"ToolHolderA_BroachName":"D20","ToolHolderA_LateralCompensation":0.000,"ToolHolderA_DepthCompensation":0.000,"ToolHolderA_AngleCompensation":0.000,"ToolHolderB_Position":24,"ToolHolderB_BroachName":"___B","ToolHolderB_LateralCompensation":0.000,"ToolHolderB_DepthCompensation":0.000,"ToolHolderB_AngleCompensation":0.000,"ToolHolderC_Position":24,"ToolHolderC_BroachName":"___C","ToolHolderC_LateralCompensation":0.000,"ToolHolderC_DepthCompensation":0.000,"ToolHolderC_AngleCompensation":0.000,"ToolHolderD_Position":4,"ToolHolderD_BroachName":"D50","ToolHolderD_LateralCompensation":0.000,"ToolHolderD_DepthCompensation":0.000,"ToolHolderD_AngleCompensation":0.000,"ToolHolderE_Position":2,"ToolHolderE_BroachName":"D60","ToolHolderE_LateralCompensation":0.000,"ToolHolderE_DepthCompensation":0.000,"ToolHolderE_AngleCompensation":0.000,"ToolHolderF_Position":24,"ToolHolderF_BroachName":"___F","ToolHolderF_LateralCompensation":0.000,"ToolHolderF_DepthCompensation":0.000,"ToolHolderF_AngleCompensation":0.000}}}';
+		//iState := 40; 
+		IF fbSQLStoredProcedure.ExecuteDataReturn(pParameterStrc := ADR(Parameters), cbParameterStrc := SIZEOF(Parameters), pSQLDBResult := ADR(fbSQLResult)) THEN
+			IF fbSQLStoredProcedure.bError THEN
+				tcMessage := fbSQLStoredProcedure.ipTcResult;
+				NumRetry := NumRetry + 1;
+				IF NumRetry > 3 THEN
+					iState 							:= 1010; 
+				ELSE
+					iState 							:= 15; 
+				END_IF
+			ELSE
+				IF Parameters.return_value = 0 THEN
+					DataGood := TRUE;
+					Empty := FALSE;
+					
+					iState 							:= 30; 
+				ELSIF Parameters.return_value = 100 THEN
+					Empty := TRUE;
+					DataGood := FALSE;
+					
+					iState 							:= 999; 
+				ELSE 				
+					DataGood := FALSE;
+					Empty := FALSE;
+					IF Parameters.return_value < 0 THEN
+						iState := -10000 + TO_INT(Parameters.return_value);
+					ELSE
+						iState := 10000 + TO_INT(Parameters.return_value);
+					END_IF
+				END_IF
+			END_IF    
+		END_IF
+		
+	15:
+		IF TON_DelayRetry.Q THEN
+			iState 							:= 10;
+		END_IF
+		
+	20:
+		IF fbSQLResult.Read(0, fbSQLResult.nDataCount, ADR(Buffer), SIZEOF(Buffer), FALSE, TRUE) THEN
+			IF fbSQLResult.bError THEN
+				iState 							:= 1020;
+			ELSE
+				
+				iState 							:= 30;
+			END_IF
+		END_IF
+		
+	30:
+		IF fbSQLResult.Release() THEN
+			iState 								:= 40;		
+		END_IF
+		
+	40:	
+		IF(fbJsonDataType.SetSymbolFromJson(Parameters.PLCData,'DUT_stPLCData', SIZEOF(stPLCData), ADR(stPLCData))) THEN	
+			
+			iState 								:= 999;	
+			
+		ELSE
+			iState 								:= 1040;
+		END_IF			
+	
+	999:
+		Done			:= TRUE;
+		Busy			:= FALSE;
+		
+ END_CASE 
+ 
+IF iState > 1000 OR iState <= -10000 THEN
+	Error 		:= TRUE;
+	ErrorID	 	:= iState; 
+	Busy	 	:= FALSE;
+	iState := -1;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="PRG_MSSQL_spGetNextPartPLCData">
+      <LineId Id="4110" Count="0" />
+      <LineId Id="3947" Count="15" />
+      <LineId Id="3966" Count="3" />
+      <LineId Id="3971" Count="0" />
+      <LineId Id="4105" Count="0" />
+      <LineId Id="4118" Count="4" />
+      <LineId Id="3975" Count="2" />
+      <LineId Id="3979" Count="1" />
+      <LineId Id="4106" Count="0" />
+      <LineId Id="3981" Count="0" />
+      <LineId Id="4113" Count="0" />
+      <LineId Id="4115" Count="1" />
+      <LineId Id="4114" Count="0" />
+      <LineId Id="3983" Count="0" />
+      <LineId Id="4152" Count="17" />
+      <LineId Id="3994" Count="0" />
+      <LineId Id="3996" Count="1" />
+      <LineId Id="4107" Count="2" />
+      <LineId Id="4111" Count="1" />
+      <LineId Id="3998" Count="23" />
+      <LineId Id="4027" Count="1" />
+      <LineId Id="4030" Count="8" />
+      <LineId Id="4040" Count="0" />
+      <LineId Id="3300" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

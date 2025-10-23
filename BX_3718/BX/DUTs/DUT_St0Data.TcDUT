@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_St0Data" Id="{fcc68846-0ae6-42a0-b715-62dfc8398dbf}">
+    <Declaration><![CDATA[TYPE DUT_St0Data :
+STRUCT
+	FlagP	: ARRAY[0..5] OF BYTE; 	
+	RunP	: DWORD;
+	WindP	: DWORD;
+	NpP		: DWORD;
+	Tpcy	: BYTE;
+	Tppz	: BYTE;
+	TpcyS	: ARRAY[1..48] OF BYTE;
+	Data	: ARRAY[1..93] OF DWORD;
+	DataB	: ARRAY[1..20] OF BYTE;
+	DataAu	: ARRAY[1..10] OF DWORD;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

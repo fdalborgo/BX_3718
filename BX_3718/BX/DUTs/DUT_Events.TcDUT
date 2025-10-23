@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <DUT Name="DUT_Events" Id="{585a88e1-3c06-4d3b-958f-caaf7c21653d}">
+    <Declaration><![CDATA[TYPE DUT_Events :
+STRUCT
+	wAlarm						: ARRAY[0..G.MAX_ALR_WORD] OF DWORD;						//Bit mask allarmi
+	
+	aAlarm						: ARRAY[0..G.MAX_ALR] OF FB_TcAlarm;
+	
+	Cumulative					: BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

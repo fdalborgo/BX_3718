@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FC_Check_EOT" Id="{13103aff-fdcf-4310-bc8e-5635153fad3d}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_Check_EOT : BOOL
+VAR_INPUT
+	I_sString : REFERENCE TO T_MaxString;
+END_VAR
+VAR
+	stringPos	: INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[stringPos := FIND(I_sString, EOT);
+IF stringPos <> 0 THEN
+	I_sString := MID(I_sString, stringPos-1, 1);
+	FC_Check_EOT := TRUE;
+ELSE
+	FC_Check_EOT := FALSE;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FC_Check_EOT">
+      <LineId Id="127" Count="2" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="137" Count="1" />
+      <LineId Id="130" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

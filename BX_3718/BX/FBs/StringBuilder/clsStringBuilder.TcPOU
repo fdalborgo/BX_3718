@@ -1,0 +1,109 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="clsStringBuilder" Id="{368e5049-935b-4562-a874-cb9be5225f7d}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK PUBLIC clsStringBuilder IMPLEMENTS  I_StringBuilder, I_LimitedStringBuilder
+VAR
+	{attribute 'hide'}
+	_workString : STRING;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="Append" Id="{3f45997e-6006-457f-9a9a-30ac281e8f8a}">
+      <Declaration><![CDATA[METHOD PUBLIC Append : I_StringBuilder // Append text to t current build string.
+VAR_INPUT
+	Text : STRING; //Text to append to current build string
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_workString:= CONCAT(_WorkString, Text);
+Append := THIS^;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="InsertAtLocation" Id="{b2ed9ced-aca1-4991-af8e-c808997da606}">
+      <Declaration><![CDATA[METHOD PUBLIC InsertAtLocation : I_StringBuilder
+VAR_INPUT
+	Text : STRING;
+	Position : INT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_WorkString := Tc2_Standard.INSERT(_WorkSTring, Text, Position);
+InsertAtLocation := THIS^;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Left" Id="{eedcf736-2954-4be2-9a10-4eef313e2edc}">
+      <Declaration><![CDATA[METHOD PUBLIC Left : I_StringBuilder
+VAR_INPUT
+	Count	: INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_workString:= Tc2_Standard.LEFT(_WorkString, Count);
+Left := THIS^;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Length" Id="{1625b249-2c40-493a-91b2-4f976cbd13c7}">
+      <Declaration><![CDATA[PROPERTY Length : INT
+]]></Declaration>
+      <Get Name="Get" Id="{69f820ae-44d5-4ad7-94ba-447bf8f9e353}">
+        <Declaration><![CDATA[
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Length := LEN(_workString);]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Reset" Id="{f04f2676-7659-44a8-87c7-48fdd5328c04}">
+      <Declaration><![CDATA[METHOD PUBLIC Reset : I_LimitedStringBuilder // Reset current build string to an empty string.]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_WorkString := '';
+Reset := THIS^;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Right" Id="{378f0fdc-3469-4c64-8653-911bf890f042}">
+      <Declaration><![CDATA[METHOD Right : I_StringBuilder
+VAR_INPUT
+	Count	: INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_workString:= Tc2_Standard.RIGHT(_WorkString, Count);
+Right := THIS^;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ToString" Id="{8c20dc6d-f3fa-4203-b887-d1b9b96ecacc}">
+      <Declaration><![CDATA[METHOD PUBLIC ToString : STRING //Returns current build string.]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ToString := _WorkString;]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="clsStringBuilder">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="clsStringBuilder.Append">
+      <LineId Id="3" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="clsStringBuilder.InsertAtLocation">
+      <LineId Id="3" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="clsStringBuilder.Left">
+      <LineId Id="3" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="clsStringBuilder.Length.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="clsStringBuilder.Reset">
+      <LineId Id="3" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="clsStringBuilder.Right">
+      <LineId Id="3" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="clsStringBuilder.ToString">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

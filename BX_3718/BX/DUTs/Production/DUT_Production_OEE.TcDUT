@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="DUT_Production_OEE" Id="{dbf7b778-d704-4652-becf-54f8c04a9032}">
+    <Declaration><![CDATA[TYPE DUT_Production_OEE :
+STRUCT
+	Availabilty 			: REAL;
+	Performance 			: REAL;
+	Quality					: REAL;
+	tON						: REAL; // Tempo di reale produzione in Production Mode
+	tOFF					: REAL; // Tempo di attesa operatore in Production Mode
+	tDOWN					: REAL; // Tempo di macchina in uno stato che non può produrre
+	s_tON					: STRING; // Tempo di reale produzione in Production Mode
+	s_tOFF					: STRING; // Tempo di attesa operatore in Production Mode
+	s_tDOWN					: STRING; // Tempo di macchina in uno stato che non può produrre
+	s_tTOTAL				: STRING; // Tempo di osservazione
+	OEE						: REAL;
+	GoodPieces				: DINT;
+	BadPieces				: DINT;
+	IdealCycleTime			: TIME := T#9s;
+	PlannedProductionTime	: DWORD := 60;
+	OperatingTime			: TIME;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

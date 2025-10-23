@@ -1,0 +1,1210 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="MAIN_SERVICE" Id="{b7104338-60be-49e0-86c0-dd3cbe242776}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN_SERVICE
+VAR
+	
+// HMI - Tools	
+	NT_CNCScreenDisplay: NT_StartProcess;
+	NT_ProgramTransferTool: NT_StartProcess;
+	NT_TaskManager: NT_StartProcess;
+	NT_OnScreenKeyboard: NT_StartProcess;
+	NT_CloseBrowser: NT_StartProcess;
+	NT_FanucLadder: NT_StartProcess;
+	NT_FlyCad: NT_StartProcess;
+	NT_OpenExe : NT_StartProcess;
+	NT_CloseExe : NT_StartProcess;
+	
+	TON_OpenPage : TON;
+	
+	GetTime								: FB_LocalSystemTime := ( bEnable := TRUE, dwCycle := 1 );	
+	
+	otTON						: OTSTRUCT;
+	otTOFF						: OTSTRUCT;
+	otTDOWN						: OTSTRUCT;
+	otTTotal					: OTSTRUCT;
+	TempSum						: REAL;
+	TempTime1					: REAL;
+	TempTime2					: REAL;
+	TempTime3					: REAL;
+	RTON_ON					: FB_RetainTimer;
+	RTON_OFF				: FB_RetainTimer;
+	RTON_DOWN				: FB_RetainTimer;
+
+	fbGetCurTaskIndex : GETCURTASKINDEX;
+	
+	TON_OvrMultFeedback : TON;
+	OvrMultiplierOld	: USINT;
+	_iDataPos : INT;
+	i : INT;
+	RTRIG_ClearAlarm	: R_TRIG;
+	TcSourceInfo	: FB_TcSourceInfo;
+	fbRefresh : FB_Refresh;
+	MSSQL_Events					: DUT_Events;
+	Marker_Events					: DUT_Events;
+	DataRequest_Events				: DUT_Events;
+	
+	TON_DelayMarkerConnected	: TON;
+	fbDoublingTriggerGood : FB_DoublingTrigger;
+	fbDoublingTriggerBad : FB_DoublingTrigger;
+	fbHMI_SP_Alarm			: ARRAY[1..DB.MAX_NUMBER_ST] OF FB_HMI_SP_Alarm;
+	MSSQL_TcSourceInfo	: ARRAY[1..DB.MAX_NUMBER_ST] OF FB_TcSourceInfo;
+	TcEventLogger 	: FB_TcEventLogger;
+	RTRIG_BatchChange			: R_TRIG;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[fbGetCurTaskIndex();
+
+A_00_Init();
+A_10_DiagnosticTools();	// Windows Software tools
+A_20_Production();
+A_30_SystemTime();
+A_92_HMI_Output();
+A_99_Alarm();
+
+PRG_EventManagement();]]></ST>
+    </Implementation>
+    <Action Name="A_00_Init" Id="{ac469151-9349-4452-81d9-d57e2e4d53aa}">
+      <Implementation>
+        <ST><![CDATA[IF _TaskInfo[fbGetCurTaskIndex.index].FirstCycle THEN	// First cycle of this task
+	A_99_Alarm_Init();
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_10_DiagnosticTools" Id="{6dbe623b-f674-4c8f-ac24-9f261b53c326}">
+      <Implementation>
+        <ST><![CDATA[//UPS Management
+PF_00_UPS();
+
+// Launch utility software
+NT_CNCScreenDisplay(
+	NETID:= '', 
+	PATHSTR:= 'C:\Program Files (x86)\CNCScreenE\CNCScrnE.exe', 
+	DIRNAME:= '', 
+	COMNDLINE:= '', 
+	START:= HMI.In.Tools.CNCScreenDisplay, 
+	TMOUT:= , 
+	BUSY=> HMI.Out.Tools.CNCScreenDisplay, 
+	ERR=> , 
+	ERRID=> );
+	
+NT_ProgramTransferTool(
+	NETID:= '', 
+	PATHSTR:= 'C:\Program Files (x86)\FANUC\Program Transfer Tool\Bin\PttMain.exe', 
+	DIRNAME:= '', 
+	COMNDLINE:= , 
+	START:= HMI.In.Tools.ProgramTransferTool, 
+	TMOUT:= , 
+	BUSY=> HMI.Out.Tools.ProgramTransferTool, 
+	ERR=> , 
+	ERRID=> );
+	
+NT_TaskManager(
+	NETID:= , 
+	PATHSTR:= 'C:\Windows\system32\Taskmgr.exe', 
+	DIRNAME:= '', 
+	COMNDLINE:= , 
+	START:= HMI.In.Tools.TaskManager, 
+	TMOUT:= , 
+	BUSY=> HMI.Out.Tools.TaskManager, 
+	ERR=> , 
+	ERRID=> );
+	
+NT_OnScreenKeyboard(
+	NETID:= , 
+	PATHSTR:= 'C:\GSCNext\osk1.bat', 
+	DIRNAME:= '', 
+	COMNDLINE:= , 
+	START:= HMI.In.Tools.OnScreenKeyboard, 
+	TMOUT:= , 
+	BUSY=> HMI.Out.Tools.OnScreenKeyboard, 
+	ERR=> , 
+	ERRID=> );
+	
+NT_CloseBrowser(
+	NETID:= , 
+	PATHSTR:= 'C:\GSCNext\CloseBrowser.bat', 
+	DIRNAME:= '', 
+	COMNDLINE:= , 
+	START:= HMI.In.Tools.CloseBrowser, 
+	TMOUT:= , 
+	BUSY=> HMI.Out.Tools.CloseBrowser, 
+	ERR=> , 
+	ERRID=> );
+	
+NT_FanucLadder(
+	NETID:= , 
+	PATHSTR:= 'C:\PROGRAM Files (x86)\FANUC PMC Programmer\FANUC LADDER-3\Fladder.exe', 
+	DIRNAME:= '', 
+	COMNDLINE:= , 
+	START:= HMI.In.Tools.FanucLadder, 
+	TMOUT:= , 
+	BUSY=> HMI.Out.Tools.FanucLadder, 
+	ERR=> , 
+	ERRID=> );
+	
+NT_FlyCad(
+	NETID:= , 
+	PATHSTR:= 'C:\Program Files (x86)\FlyCAD\flycad.exe', 
+	DIRNAME:= '', 
+	COMNDLINE:= , 
+	START:= HMI.In.Tools.FlyCad, 
+	TMOUT:= , 
+	BUSY=> HMI.Out.Tools.FlyCad, 
+	ERR=> , 
+	ERRID=> );
+
+NT_OpenExe( 
+	NETID := , 
+	PATHSTR := 'C:\GSCNext\UtilityBAT\AperturaExeFromPlc.bat', 
+	DIRNAME := 'C:\GSCNext\UtilityBAT', 
+	COMNDLINE := , 
+	START := , 
+	TMOUT := T#5S, 
+	BUSY => , 
+	ERR => , 
+	ERRID =>
+);
+
+NT_CloseExe(
+	NETID:= , 
+	PATHSTR := 'C:\GSCNext\UtilityBAT\ChiusuraExeFromPlc.bat', 
+	DIRNAME := 'C:\GSCNext\UtilityBAT', 
+	COMNDLINE := , 
+	START := , 
+	TMOUT := T#5S, 
+	BUSY => , 
+	ERR => , 
+	ERRID => 
+);
+	
+///////////////////////////////////////////////////////////////
+TON_OpenPage(IN:= HMI.In.Tools.OpenPage, PT:= T#5S);
+HMI.Out.Tools.OpenPage := TON_OpenPage.Q;
+
+///////////////////////////////////////////////////////////////
+	
+	]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_20_Production" Id="{06407e37-8b82-4701-955e-d8e547994d87}">
+      <Implementation>
+        <ST><![CDATA[fbDoublingTriggerGood(TriggerIn := G.OEE_bCountUpGood);
+fbDoublingTriggerBad(TriggerIn := G.OEE_bCountUpBad);
+
+PRG_OEE(Enable := HMI.In.Statistics.OEE_Enable,
+		Reset := HMI.In.Statistics.OEE_Reset,
+		StartTimer := NOT G.MachineEmpty AND NOT PRG_OEE.Reset,
+		bStatusON := HMI.Out.Header.MachineState = eState.Running,
+		bStatusOFF := NOT PRG_OEE.bStatusON AND NOT PRG_OEE.bStatusDOWN,
+		bStatusDOWN := MachineData.aBool[4],
+		tPlannedProductionTime := DWORD_TO_TIME(HMI.Production.OEE.PlannedProductionTime*60000),
+		tIdealCycleTime := HMI.Production.OEE.IdealCycleTime,
+		bCountUpGood := fbDoublingTriggerGood.TriggerOut,
+		bCountUpBad	:= fbDoublingTriggerBad.TriggerOut,
+		GoodPieces => HMI.Production.OEE.GoodPieces,
+		BadPieces => HMI.Production.OEE.BadPieces,	
+);
+
+IF G.OEE_bCountUpGood THEN
+	G.OEE_bCountUpGood  := FALSE;
+END_IF
+IF G.OEE_bCountUpBad THEN
+	G.OEE_bCountUpBad  := FALSE;
+END_IF
+
+otTON := TIME_TO_OTSTRUCT(PRG_OEE.tON);
+otTOFF := TIME_TO_OTSTRUCT(PRG_OEE.tOFF);
+otTDOWN := TIME_TO_OTSTRUCT(PRG_OEE.tDOWN);
+otTTotal := TIME_TO_OTSTRUCT(PRG_OEE.tON + PRG_OEE.tOFF + PRG_OEE.tDOWN);
+
+HMI.Production.OEE.s_tON 	:= FC_Concat4(WORD_TO_STRING(otTON.wHour) , 'h ',WORD_TO_STRING(otTON.wMinute), 'm');
+HMI.Production.OEE.s_tOFF 	:= FC_Concat4(WORD_TO_STRING(otTOFF.wHour) , 'h ',WORD_TO_STRING(otTOFF.wMinute), 'm');
+HMI.Production.OEE.s_tDOWN 	:= FC_Concat4(WORD_TO_STRING(otTDOWN.wHour) , 'h ',WORD_TO_STRING(otTDOWN.wMinute), 'm');
+HMI.Production.OEE.s_tTOTAL := FC_Concat4(WORD_TO_STRING(otTTotal.wHour) , 'h ',WORD_TO_STRING(otTTotal.wMinute), 'm');
+
+HMI.Production.OEE.Availabilty 	:= 100* PRG_OEE.Availabilty;
+HMI.Production.OEE.Performance 	:= 100* PRG_OEE.Performance;
+HMI.Production.OEE.Quality 		:= 100* PRG_OEE.Quality;
+HMI.Production.OEE.Availabilty 	:= 100* PRG_OEE.Availabilty;
+HMI.Production.OEE.OEE 			:= 100* PRG_OEE.OEE;
+
+TempTime1 := TIME_TO_REAL(PRG_OEE.tDOWN);
+TempTime2 := TIME_TO_REAL(PRG_OEE.tOFF);
+TempTime3 := TIME_TO_REAL(PRG_OEE.tON);
+TempSum	:= TempTime1 + TempTime2 + TempTime3;
+
+HMI.Production.OEE.tDOWN := SEL(TempSum <> 0, 0, (TempTime1/TempSum)*100);
+HMI.Production.OEE.tOFF	 := SEL(TempSum <> 0, 0, (TempTime2/TempSum)*100);
+HMI.Production.OEE.tON	 := SEL(TempSum <> 0, 0, (TempTime3/TempSum)*100);
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_30_SystemTime" Id="{d55a47bd-2584-425d-924e-0e5550c1d33f}">
+      <Implementation>
+        <ST><![CDATA[GetTime();
+IF GetTime.bValid THEN
+	G.SystemTime := SYSTEMTIME_TO_DT(GetTime.systemTime);
+ELSE
+	MEMSET(ADR(G.SystemTime), 16#0, SIZEOF(G.SystemTime));
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_92_HMI_Output" Id="{bcb4c0df-0332-45af-98f0-afb578774891}">
+      <Implementation>
+        <ST><![CDATA[// ip definition for user management
+HMI.Out.IpDevices[0].Ip := '127.0.0.1';
+HMI.Out.IpDevices[0].DeviceType := eDeviceType.Primary;
+HMI.Out.IpDevices[1].Ip := '192.168.1.211';
+HMI.Out.IpDevices[1].DeviceType := eDeviceType.Secondary;
+
+// BOOL
+IF MachineData.aBool[1] THEN
+	HMI.Out.Header.OperatingMode := eMode.MODE_SINGLE;
+ELSIF MachineData.aBool[0] THEN
+	HMI.Out.Header.OperatingMode := eMode.MODE_AUTO;
+ELSIF MachineData.aBool[2] THEN
+	HMI.Out.Header.OperatingMode := eMode.MODE_MANUAL;
+ELSIF MachineData.aBool[5] THEN
+	HMI.Out.Header.OperatingMode := eMode.MODE_MAINTENANCE;	
+END_IF
+
+IF HMI.Out.UPSDiagnostic.State.ePowerStatus <> E_UpsPowerStatus.PowerOnLine THEN
+	HMI.Out.Header.MachineState := eState.UpsOn;
+ELSE
+	IF MachineData.aBool[7] THEN
+		HMI.Out.Header.MachineState := eState.PowerOff;
+	ELSIF MachineData.aBool[10] THEN	
+		HMI.Out.Header.MachineState := eState.Home;
+	ELSIF MachineData.aBool[2] THEN
+		HMI.Out.Header.MachineState := eState.Manual;
+	ELSIF MachineData.aBool[6] THEN
+		HMI.Out.Header.MachineState	:= eState.Ready;
+	ELSIF MachineData.aBool[3] THEN
+		HMI.Out.Header.MachineState := eState.Running;
+	ELSIF MachineData.aBool[4] THEN
+		HMI.Out.Header.MachineState := eState.Alarm;
+	ELSIF MachineData.aBool[8] THEN
+		HMI.Out.Header.MachineState := eState.Emptying;
+	ELSIF MachineData.aBool[9] THEN
+		HMI.Out.Header.MachineState := eState.Loading;
+	ELSE
+		HMI.Out.Header.MachineState := eState.Undefine;
+	END_IF
+END_IF
+
+HMI.Out.Header.Icons[eIcon.Emg] 		:= NOT MachineData.aBool[40];
+HMI.Out.Header.Icons[eIcon.DoorOpen] 	:= NOT MachineData.aBool[41];
+HMI.Out.Header.Icons[eIcon.AirOk] 		:= MachineData.aBool[42];
+HMI.Out.Header.Icons[eIcon.HydraulicOk] := MachineData.aBool[43];
+HMI.Out.Header.Icons[eIcon.EquipmentOk] := MachineData.aBool[44];
+HMI.Out.Header.Icons[eIcon.Home] 		:= MachineData.aBool[45];
+HMI.Out.Header.Icons[eIcon.Connection] 	:= EtherCAT_DevState = 0 AND ProfiNET_DevState = 0 	;
+//										   AND MATDiagnostic_MB3000.Running 	AND NOT MATDiagnostic_MB3000.Error
+//										   AND MATDiagnostic_MB3500.Running 	AND NOT MATDiagnostic_MB3500.Error
+//										   AND MATDiagnostic_MB14000.Running 	AND NOT MATDiagnostic_MB14000.Error	
+//										   AND MATDiagnostic_MB14500.Running	AND NOT MATDiagnostic_MB14500.Error		
+//										   AND MATDiagnostic_MB8000.Running  	AND NOT MATDiagnostic_MB8000.Error;
+										   //AND MATDIAgnostic_MB11000.Running  AND NOT MATDIAgnostic_MB11000.Error
+										   //AND MATDiagnostic_MB10600.Running  AND NOT MATDiagnostic_MB10600.Error;
+
+// BYTE
+HMI.Out.Header.OvrMultiplier := UINT_TO_STRING(MachineData.aByte[3]);
+HMI.Out.Header.PathActive := UINT_TO_STRING(MachineData.aByte[4]);
+
+TON_OvrMultFeedback(PT:=T#300ms);
+IF OvrMultiplierOld <> MachineData.aByte[3] THEN
+	HMI.Out.Header.OvrMultFeedback := TRUE;
+	TON_OvrMultFeedback.IN := TRUE;
+	OvrMultiplierOld := MachineData.aByte[3];
+END_IF
+IF TON_OvrMultFeedback.Q THEN
+	HMI.Out.Header.OvrMultFeedback := FALSE;
+	TON_OvrMultFeedback.IN := FALSE;
+END_IF		
+
+// WORD
+HMI.Out.Header.Override := UINT_TO_STRING(MachineData.aWord[0]);
+HMI.Out.Header.Feedrate := UINT_TO_STRING(MachineData.aWord[1]); 
+HMI.Out.Header.Pieces[eHeaderPieces.Loaded]	:= MachineData.aWord[10];
+
+HMI.Out.Header.Pieces[eHeaderPieces.Total] := SEL(G.MachineEmpty, FC_HeaderCounters(HMI.ShiftData[1].ProcessingData.RunningNoOverRowQty, FALSE),
+													FC_HeaderCounters(HMI.ShiftData[17].ProcessingData.RunningNoOverRowQty, FALSE)
+												);
+												
+RTRIG_BatchChange(CLK := G.Batch_old <> HMI.ShiftData[1].ProcessingData.BatchName AND HMI.ShiftData[1].ProcessingData.BatchName <> '');
+IF RTRIG_BatchChange.Q THEN
+	HMI.Out.Header.Pieces[eHeaderPieces.Ko] := 0;
+	HMI.Out.Header.Pieces[eHeaderPieces.Ok] := 0;
+	G.Batch_old := HMI.ShiftData[1].ProcessingData.BatchName;
+END_IF
+HMI.Out.Header.ProgressBar := SEL(HMI.Out.Header.Pieces[eHeaderPieces.Ok] > 0 AND HMI.Out.Header.Pieces[eHeaderPieces.Total] > 0, 0, 
+								REAL_TO_USINT((HMI.Out.Header.Pieces[eHeaderPieces.Ok]/UDINT_TO_REAL(HMI.Out.Header.Pieces[eHeaderPieces.Total]))*100.0)
+								);
+
+HMI.Out.CycleTime := FC_CycleTimeToString(MAIN.CycleTime);
+
+// Station Status
+// -1: alarm
+// 0: disabilitata
+// 1: home
+// 2: working
+// 3: home end of job
+// 4: unknown
+// 5: ciclo estrazione
+// 6: ciclo di alimentazione
+HMI.St1.Status  := MachineData.aSt[1].State;
+HMI.St2.Status  := MachineData.aSt[2].State;
+HMI.St3.Status  := MachineData.aSt[3].State;
+HMI.St4.Status  := MachineData.aSt[4].State;
+HMI.St5.Status  := MachineData.aSt[5].State;
+HMI.St6.Status  := MachineData.aSt[6].State;
+HMI.St7.Status  := MachineData.aSt[7].State;
+HMI.St8.Status  := MachineData.aSt[8].State;
+HMI.St9.Status  := MachineData.aSt[9].State;
+HMI.St10.Status := MachineData.aSt[10].State;
+HMI.St11.Status := MachineData.aSt[11].State;
+HMI.St12.Status := MachineData.aSt[12].State;
+HMI.St13.Status := MachineData.aSt[13].State;
+
+// Product Status
+FOR i := 1 TO NUM_STATIONS + 5 DO
+	HMI.ShiftData[i].FLAGP.aByte := MachineData.aSt[i].FlagP_B0;
+END_FOR
+
+HMI.St1.ProductStatus  := FC_ProductStatus(HMI.ShiftData[1].FLAGP);
+HMI.St2.ProductStatus  := FC_ProductStatus(HMI.ShiftData[2].FLAGP);
+
+IF HMI.St3.TON_DelayProductStatus.Q THEN
+	HMI.St3.TON_DelayProductStatus.IN := FALSE;
+END_IF
+HMI.St3.RTRIG_ProductStatus(CLK := FC_ProductStatus(HMI.ShiftData[3].FLAGP) = eProductStatus.NotPresent);
+IF HMI.St3.RTRIG_ProductStatus.Q AND NOT HMI.St3.TON_DelayProductStatus.IN THEN
+	HMI.St3.TON_DelayProductStatus.IN := TRUE;
+END_IF
+HMI.St3.TON_DelayProductStatus(PT := T#1000MS);
+IF FC_ProductStatus(HMI.ShiftData[3].FLAGP) <> eProductStatus.NotPresent OR HMI.St3.TON_DelayProductStatus.Q THEN
+	HMI.St3.ProductStatus  := FC_ProductStatus(HMI.ShiftData[3].FLAGP);
+END_IF
+
+HMI.St4.ProductStatus  := FC_ProductStatus(HMI.ShiftData[4].FLAGP);
+HMI.St5.ProductStatus  := FC_ProductStatus(HMI.ShiftData[5].FLAGP);
+HMI.St6.ProductStatus  := FC_ProductStatus(HMI.ShiftData[6].FLAGP);
+HMI.St7.ProductStatus  := FC_ProductStatus(HMI.ShiftData[7].FLAGP);
+HMI.St8.ProductStatus  := FC_ProductStatus(HMI.ShiftData[8].FLAGP);
+
+IF HMI.St9.TON_DelayProductStatus.Q THEN
+	HMI.St9.TON_DelayProductStatus.IN := FALSE;
+END_IF
+HMI.St9.RTRIG_ProductStatus(CLK := FC_ProductStatus(HMI.ShiftData[9].FLAGP) = eProductStatus.NotPresent);
+IF HMI.St9.RTRIG_ProductStatus.Q AND NOT HMI.St9.TON_DelayProductStatus.IN THEN
+	HMI.St9.TON_DelayProductStatus.IN := TRUE;
+END_IF
+HMI.St9.TON_DelayProductStatus(PT := T#1000MS);
+IF FC_ProductStatus(HMI.ShiftData[9].FLAGP) <> eProductStatus.NotPresent OR HMI.St9.TON_DelayProductStatus.Q THEN
+	HMI.St9.ProductStatus  := FC_ProductStatus(HMI.ShiftData[9].FLAGP);
+END_IF
+
+HMI.St10.ProductStatus := FC_ProductStatus(HMI.ShiftData[10].FLAGP);
+HMI.St11.ProductStatus := FC_ProductStatus(HMI.ShiftData[11].FLAGP);
+HMI.St12.ProductStatus := FC_ProductStatus(HMI.ShiftData[12].FLAGP);
+HMI.St13.ProductStatus := FC_ProductStatus(HMI.ShiftData[13].FLAGP);
+HMI.St14.ProductStatus := FC_ProductStatus(HMI.ShiftData[14].FLAGP);
+
+//processing data
+HMI.ProcessingData[1].ProductStatus	:= HMI.St1.ProductStatus;
+HMI.ProcessingData[2].ProductStatus	:= HMI.St2.ProductStatus;
+HMI.ProcessingData[3].ProductStatus	:= HMI.St3.ProductStatus;
+HMI.ProcessingData[4].ProductStatus	:= HMI.St4.ProductStatus;
+HMI.ProcessingData[5].ProductStatus	:= HMI.St5.ProductStatus;
+HMI.ProcessingData[6].ProductStatus	:= HMI.St6.ProductStatus;
+HMI.ProcessingData[7].ProductStatus	:= HMI.St7.ProductStatus;
+HMI.ProcessingData[8].ProductStatus	:= HMI.St8.ProductStatus;
+HMI.ProcessingData[9].ProductStatus	:= HMI.St9.ProductStatus;
+HMI.ProcessingData[10].ProductStatus := HMI.St10.ProductStatus;
+HMI.ProcessingData[11].ProductStatus := HMI.St11.ProductStatus;
+HMI.ProcessingData[12].ProductStatus := HMI.St12.ProductStatus;
+HMI.ProcessingData[13].ProductStatus := HMI.St13.ProductStatus;
+HMI.ProcessingData[14].ProductStatus := HMI.St14.ProductStatus;
+
+HMI.ProcessingData[0].Name := TO_STRING(0);
+FOR i := 1 TO CNC.NUM_DATA_POSITION DO
+	// Assegna dati prodotto o default
+	HMI.ProcessingData[i].Name := TO_STRING(i);
+	IF HMI.ProcessingData[i].ProductStatus <> eProductStatus.NotPresent THEN
+		HMI.ProcessingData[i].PartId                	:= HMI.ShiftData[i].WIDP;
+		HMI.ProcessingData[i].ProductName           	:= HMI.ShiftData[i].ProcessingData.ProductName;
+		HMI.ProcessingData[i].BatchName 				:= HMI.ShiftData[i].ProcessingData.BatchName; 			
+		HMI.ProcessingData[i].RowIndex				    := HMI.ShiftData[i].ProcessingData.RowIndex;			
+		HMI.ProcessingData[i].RowRunningNo    		    := HMI.ShiftData[i].ProcessingData.RowRunningNo;   
+		HMI.ProcessingData[i].RowQty          		    := HMI.ShiftData[i].ProcessingData.RowQty;        
+		HMI.ProcessingData[i].OrderReference  		    := HMI.ShiftData[i].ProcessingData.OrderReference; 
+		HMI.ProcessingData[i].Profile     	    		:= HMI.ShiftData[i].ProcessingData.Profile;
+		HMI.ProcessingData[i].PlugType	     			:= HMI.ShiftData[i].ProcessingData.PlugType;     
+		HMI.ProcessingData[i].Brushing    	    		:= HMI.ShiftData[i].ProcessingData.Brushing;     
+		HMI.ProcessingData[i].ProfileLaser	    		:= HMI.ShiftData[i].ProcessingData.ProfileLaser;        
+		HMI.ProcessingData[i].BackHole    	    		:= HMI.ShiftData[i].ProcessingData.BackHole;        
+		HMI.ProcessingData[i].UnloadMode 		    	:= HMI.ShiftData[i].ProcessingData.UnloadMode;        
+		HMI.ProcessingData[i].RunningNoOverRowQty 		:= HMI.ShiftData[i].ProcessingData.RunningNoOverRowQty;
+		//HMI.ProcessingData[i].CurrentRowOverRowCount 	:= HMI.ShiftData[i].ProcessingData.CurrentRowOverRowCount;
+	ELSE
+		HMI.ProcessingData[i].PartId                	:= 0;
+		HMI.ProcessingData[i].ProductName           	:= '';
+		HMI.ProcessingData[i].BatchName 				:= '';	
+		HMI.ProcessingData[i].RowIndex					:= '';
+		HMI.ProcessingData[i].RowRunningNo    			:= '';
+		HMI.ProcessingData[i].RowQty          			:= '';
+		HMI.ProcessingData[i].OrderReference  			:= '';
+		HMI.ProcessingData[i].Profile     	    		:= '';
+		HMI.ProcessingData[i].PlugType	     			:= '';
+		HMI.ProcessingData[i].Brushing    	    		:= '';
+		HMI.ProcessingData[i].ProfileLaser	    		:= '';
+		HMI.ProcessingData[i].BackHole    	    		:= '';
+		HMI.ProcessingData[i].UnloadMode 		    	:= '';
+		HMI.ProcessingData[i].RunningNoOverRowQty 		:= '';
+		HMI.ProcessingData[i].CurrentRowOverRowCount	:= '';
+	END_IF	
+END_FOR
+
+fbRefresh(bRefreshHMI := HMI.Out.ProductionQueueRefresh);
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_99_Alarm" Id="{a606aaf9-70b3-4f97-ac88-b8a4ee9d6c29}">
+      <Implementation>
+        <ST><![CDATA[RTRIG_ClearAlarm(CLK := G.ResetButton);
+IF RTRIG_ClearAlarm.Q THEN
+	M_98_Marker_AlarmClear();
+	M_98_DataRequest_AlarmClear();
+	M_98_MSSQL_AlarmClear();
+END_IF
+
+TON_DelayMarkerConnected(IN := MAIN.Lasit.bEnable AND NOT MAIN.Lasit.bConnected, PT := T#10S);
+M_99_Marker_Alarm();
+M_99_DataRequest_Alarm();
+M_99_MSSQL_Alarm();]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_99_Alarm_Init" Id="{f6283eb4-669f-404d-abbc-b4696eed2700}">
+      <Implementation>
+        <ST><![CDATA[TcSourceInfo.sName := 'PLC';
+
+M_00_Init_Marker_Alarm();
+M_00_Init_DataRequest_Alarm();
+M_00_Init_MSSQL_Alarm();]]></ST>
+      </Implementation>
+    </Action>
+    <Method Name="M_00_Init_DataRequest_Alarm" Id="{af2a79e6-8827-42a7-9328-360218f984bb}">
+      <Declaration><![CDATA[METHOD PRIVATE M_00_Init_DataRequest_Alarm
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[DataRequest_Events.aAlarm[0].CreateEx(TC_Events.DataRequest_Alarm.A80000,FALSE,TcSourceInfo);
+DataRequest_Events.aAlarm[1].CreateEx(TC_Events.DataRequest_Alarm.A80001,FALSE,TcSourceInfo);
+DataRequest_Events.aAlarm[2].CreateEx(TC_Events.DataRequest_Alarm.A80002,FALSE,TcSourceInfo);
+DataRequest_Events.aAlarm[3].CreateEx(TC_Events.DataRequest_Alarm.A80003,FALSE,TcSourceInfo);
+DataRequest_Events.aAlarm[4].CreateEx(TC_Events.DataRequest_Alarm.A80004,FALSE,TcSourceInfo);
+DataRequest_Events.aAlarm[5].CreateEx(TC_Events.DataRequest_Alarm.A80005,FALSE,TcSourceInfo);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_00_Init_Marker_Alarm" Id="{711b7930-a3d6-456d-9e33-9474898de4d5}">
+      <Declaration><![CDATA[METHOD PRIVATE M_00_Init_Marker_Alarm
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Marker_Events.aAlarm[0].CreateEx(TC_Events.Marker_Alarm.A60000,FALSE,TcSourceInfo);
+Marker_Events.aAlarm[1].CreateEx(TC_Events.Marker_Alarm.A60001,FALSE,TcSourceInfo);
+Marker_Events.aAlarm[2].CreateEx(TC_Events.Marker_Alarm.A60002,FALSE,TcSourceInfo);
+Marker_Events.aAlarm[3].CreateEx(TC_Events.Marker_Alarm.A60003,FALSE,TcSourceInfo);
+Marker_Events.aAlarm[4].CreateEx(TC_Events.Marker_Alarm.A60004,FALSE,TcSourceInfo);
+Marker_Events.aAlarm[5].CreateEx(TC_Events.Marker_Alarm.A60005,FALSE,TcSourceInfo);
+Marker_Events.aAlarm[6].CreateEx(TC_Events.Marker_Alarm.A60006,FALSE,TcSourceInfo);
+
+Marker_Events.aAlarm[10].CreateEx(TC_Events.Marker_Alarm.A60010,FALSE,TcSourceInfo);
+Marker_Events.aAlarm[11].CreateEx(TC_Events.Marker_Alarm.A60011,FALSE,TcSourceInfo);
+Marker_Events.aAlarm[12].CreateEx(TC_Events.Marker_Alarm.A60012,FALSE,TcSourceInfo);
+Marker_Events.aAlarm[13].CreateEx(TC_Events.Marker_Alarm.A60013,FALSE,TcSourceInfo);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_00_Init_MSSQL_Alarm" Id="{38cae1f9-4822-4576-b7e9-f81681a4ad7b}">
+      <Declaration><![CDATA[METHOD PRIVATE M_00_Init_MSSQL_Alarm
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MSSQL_Events.aAlarm[0].CreateEx(TC_Events.DB_Alarm.A50000,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[1].CreateEx(TC_Events.DB_Alarm.A50001,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[2].CreateEx(TC_Events.DB_Alarm.A50002,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[3].CreateEx(TC_Events.DB_Alarm.A50003,FALSE,TcSourceInfo);
+
+MSSQL_Events.aAlarm[10].CreateEx(TC_Events.DB_Alarm.A50010,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[11].CreateEx(TC_Events.DB_Alarm.A50011,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[12].CreateEx(TC_Events.DB_Alarm.A50012,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[13].CreateEx(TC_Events.DB_Alarm.A50013,FALSE,TcSourceInfo);
+
+MSSQL_Events.aAlarm[20].CreateEx(TC_Events.DB_Alarm.A50020,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[21].CreateEx(TC_Events.DB_Alarm.A50021,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[22].CreateEx(TC_Events.DB_Alarm.A50022,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[23].CreateEx(TC_Events.DB_Alarm.A50023,FALSE,TcSourceInfo);
+                                                                 
+MSSQL_Events.aAlarm[30].CreateEx(TC_Events.DB_Alarm.A50030,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[31].CreateEx(TC_Events.DB_Alarm.A50031,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[32].CreateEx(TC_Events.DB_Alarm.A50032,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[33].CreateEx(TC_Events.DB_Alarm.A50033,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[34].CreateEx(TC_Events.DB_Alarm.A50034,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[35].CreateEx(TC_Events.DB_Alarm.A50035,FALSE,TcSourceInfo);
+                                                                 
+MSSQL_Events.aAlarm[40].CreateEx(TC_Events.DB_Alarm.A50040,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[41].CreateEx(TC_Events.DB_Alarm.A50041,FALSE,TcSourceInfo);
+MSSQL_Events.aAlarm[42].CreateEx(TC_Events.DB_Alarm.A50042,FALSE,TcSourceInfo);
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_98_DataRequest_AlarmClear" Id="{a3ac90e7-decd-48da-a7cd-11d3100ff565}">
+      <Declaration><![CDATA[METHOD PRIVATE M_98_DataRequest_AlarmClear
+VAR
+	i :UINT := 0;
+	j :UINT := 0;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR j := 0 TO G.MAX_ALR_WORD DO
+	IF DataRequest_Events.wAlarm[j]<> 0 THEN
+		FOR i:= 0 TO G.MAX_ALR DO
+			DataRequest_Events.aAlarm[i].Clear(0,TRUE);			
+		END_FOR	
+	END_IF
+	DataRequest_Events.wAlarm[j] := 0;
+END_FOR	
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_98_Marker_AlarmClear" Id="{153d92e9-a24a-45bc-9d5f-cc9b695cbd68}">
+      <Declaration><![CDATA[METHOD PRIVATE M_98_Marker_AlarmClear
+VAR
+	i :UINT := 0;
+	j :UINT := 0;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR j := 0 TO G.MAX_ALR_WORD DO
+	IF Marker_Events.wAlarm[j]<> 0 THEN
+		FOR i:= 0 TO G.MAX_ALR DO
+			Marker_Events.aAlarm[i].Clear(0,TRUE);			
+		END_FOR	
+	END_IF
+	Marker_Events.wAlarm[j] := 0;
+END_FOR	
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_98_MSSQL_AlarmClear" Id="{4f67cdc7-b07e-4372-85ab-10f6ed0da706}">
+      <Declaration><![CDATA[METHOD PRIVATE M_98_MSSQL_AlarmClear
+VAR
+	i :UINT := 0;
+	j :UINT := 0;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR j := 0 TO G.MAX_ALR_WORD DO
+	IF MSSQL_Events.wAlarm[j]<> 0 THEN
+		FOR i:= 0 TO G.MAX_ALR DO
+			MSSQL_Events.aAlarm[i].Clear(0,TRUE);			
+		END_FOR	
+	END_IF
+	MSSQL_Events.wAlarm[j] := 0;
+END_FOR	
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_99_DataRequest_Alarm" Id="{508939ad-5494-47b1-8793-a8ae2a413d5f}">
+      <Declaration><![CDATA[METHOD PRIVATE M_99_DataRequest_Alarm
+VAR
+	i :UINT := 0;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[DataRequest_Events.Cumulative := FALSE;
+FOR i := 0 TO G.MAX_ALR_WORD DO
+	IF DataRequest_Events.wAlarm[i]<> 0 THEN
+		DataRequest_Events.Cumulative := TRUE;
+		EXIT;
+	END_IF
+END_FOR
+
+IF MAIN.fbDataRequest.Error THEN
+	CASE MAIN.fbDataRequest.ErrorID OF
+		1020://fbDataRequest - GetNextPLCData error
+			DataRequest_Events.wAlarm[0].2 := 1;
+			DataRequest_Events.aAlarm[2].Raise(0);
+		1031:// errore stringa abilitazione foro coda (non rispetta le impostazioni)
+			DataRequest_Events.wAlarm[0].4 := 1;
+			DataRequest_Events.aAlarm[4].Raise(0); 
+		1032:// errore stringa abilitazione foro coda (vuota)
+			DataRequest_Events.wAlarm[0].5 := 1;
+			DataRequest_Events.aAlarm[5].Raise(0);
+		1999://fbDataRequest - Timeout
+			DataRequest_Events.wAlarm[0].1 := 1;
+			DataRequest_Events.aAlarm[1].ipArguments.Clear().AddDInt(MAIN.fbDataRequest.ErrorSubID);
+			DataRequest_Events.aAlarm[1].Raise(0);
+		ELSE///fbDataRequest - Generic error
+			IF MAIN.fbDataRequest.ErrorID <> 1030 THEN
+				DataRequest_Events.wAlarm[0].0 := 1;
+				DataRequest_Events.aAlarm[0].ipArguments.Clear().AddDInt(MAIN.fbDataRequest.ErrorID);
+				DataRequest_Events.aAlarm[0].Raise(0);	
+			END_IF
+	END_CASE
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_99_Marker_Alarm" Id="{9640bd45-1afb-4ff7-8878-a13554ee90a1}">
+      <Declaration><![CDATA[METHOD PRIVATE M_99_Marker_Alarm
+VAR
+	i :UINT := 0;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Marker_Events.Cumulative := FALSE;
+FOR i := 0 TO G.MAX_ALR_WORD DO
+	IF Marker_Events.wAlarm[i]<> 0 THEN
+		Marker_Events.Cumulative := TRUE;
+		EXIT;
+	END_IF
+END_FOR	
+
+IF TON_DelayMarkerConnected.Q THEN
+	Marker_Events.wAlarm[0].2 := 1;
+	Marker_Events.aAlarm[2].Raise(0);
+END_IF
+
+IF MAIN.LasitManager.Error THEN
+	CASE MAIN.LasitManager.ErrorID OF
+		1000:// lasit not connected
+			Marker_Events.wAlarm[0].3 := 1;
+			Marker_Events.aAlarm[3].Raise(0);
+		1010:// lasit not found layout in the list	
+			Marker_Events.wAlarm[0].4 := 1;
+			Marker_Events.aAlarm[4].Raise(0);
+		1030:// lasit loading layout error
+			Marker_Events.wAlarm[0].5 := 1;
+			Marker_Events.aAlarm[5].Raise(0);
+		1070:// lasit loading text error
+			Marker_Events.wAlarm[0].6 := 1;
+			Marker_Events.aAlarm[6].Raise(0);
+		1999://fbDataRequest - Timeout
+			Marker_Events.wAlarm[0].1 := 1;
+			Marker_Events.aAlarm[1].ipArguments.Clear().AddDInt(MAIN.LasitManager.ErrorSubID);
+			Marker_Events.aAlarm[1].Raise(0);
+		ELSE// lasit generic error
+			Marker_Events.wAlarm[0].0 := 1;
+			Marker_Events.aAlarm[0].ipArguments.Clear().AddDInt(MAIN.LasitManager.ErrorID);
+			Marker_Events.aAlarm[0].Raise(0);
+	END_CASE
+END_IF
+
+IF MAIN.fbFlyPowerMarkExeManager.Error THEN
+	CASE MAIN.fbFlyPowerMarkExeManager.ErrorID OF
+		1030:// powermark error tentativo di apertura fallito
+			Marker_Events.wAlarm[0].12 := 1;
+			Marker_Events.aAlarm[12].Raise(0);
+		1020:// powermark error tentativo di chiusura fallito
+			Marker_Events.wAlarm[0].13 := 1;
+			Marker_Events.aAlarm[13].Raise(0);
+		1999://powermark error - Timeout
+			Marker_Events.wAlarm[0].11 := 1;
+			Marker_Events.aAlarm[11].ipArguments.Clear().AddDInt(MAIN.fbFlyPowerMarkExeManager.ErrorSubID);
+			Marker_Events.aAlarm[11].Raise(0);
+		ELSE// powermark generic error
+			Marker_Events.wAlarm[10].0 := 1;
+			Marker_Events.aAlarm[10].ipArguments.Clear().AddDInt(MAIN.fbFlyPowerMarkExeManager.ErrorID);
+			Marker_Events.aAlarm[10].Raise(0);
+	END_CASE
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_99_MSSQL_Alarm" Id="{0b8b45fd-74db-497d-9d52-34a02e52e03f}">
+      <Declaration><![CDATA[METHOD PRIVATE M_99_MSSQL_Alarm
+VAR
+	i :UDINT := 0;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MSSQL_Events.Cumulative := FALSE;
+FOR i := 0 TO G.MAX_ALR_WORD DO
+	IF MSSQL_Events.wAlarm[i]<> 0 THEN
+		MSSQL_Events.Cumulative := TRUE;
+		EXIT;
+	END_IF
+END_FOR
+
+IF PRG_MSSQL_InitConnection.Error THEN
+	CASE PRG_MSSQL_InitConnection.ErrorID OF
+		
+		1001:// connection error
+			MSSQL_Events.wAlarm[0].1 := 1;
+			MSSQL_Events.aAlarm[1].Raise(0);
+			
+		1003:// disconnection error
+			MSSQL_Events.wAlarm[0].2 := 1;
+			MSSQL_Events.aAlarm[2].Raise(0);
+			
+		1010, 1020, 1030, 1040:// init sql commands error
+			MSSQL_Events.wAlarm[0].3 := 1;
+			MSSQL_Events.aAlarm[3].ipArguments.Clear().AddDInt(PRG_MSSQL_InitConnection.ErrorID);
+			MSSQL_Events.aAlarm[3].Raise(0);
+			
+		ELSE// init sql stored procedure error
+			MSSQL_Events.wAlarm[0].0 := 1;
+			MSSQL_Events.aAlarm[0].ipArguments.Clear().AddDInt(PRG_MSSQL_InitConnection.ErrorID);
+			MSSQL_Events.aAlarm[0].Raise(0);
+	END_CASE
+END_IF
+
+///////////////////////////////////////////////////////////////
+IF PRG_MSSQL_spGetNextPartPLCData.Error THEN
+	CASE PRG_MSSQL_spGetNextPartPLCData.ErrorID OF
+		
+		1050://Req new PLC data execute error
+			MSSQL_Events.wAlarm[1].1 := 1;
+			MSSQL_Events.aAlarm[11].Raise(0);
+			
+		1060://Req new PLC data read error
+			MSSQL_Events.wAlarm[1].2 := 1;
+			MSSQL_Events.aAlarm[12].Raise(0);
+			
+		1080://Req new PLC data result conversion error
+			MSSQL_Events.wAlarm[1].3 := 1;
+			MSSQL_Events.aAlarm[13].ipArguments.Clear().AddDInt(PRG_MSSQL_spGetNextPartPLCData.ErrorID);
+			MSSQL_Events.aAlarm[13].Raise(0);
+		
+		-10001:// SP on DB generic error
+			MSSQL_Events.wAlarm[2].4 := 1;
+			MSSQL_Events.aAlarm[14].Raise(0);			
+		-10101:// SP on DB Row Not Found
+			MSSQL_Events.wAlarm[2].5 := 1;
+			MSSQL_Events.aAlarm[15].Raise(0);
+		-11001:// SP on DB ProfileNotFound
+			MSSQL_Events.wAlarm[2].6 := 1;
+			MSSQL_Events.aAlarm[16].Raise(0);
+		-11002:// SP on DB BroachNotFound
+			MSSQL_Events.wAlarm[2].7 := 1;
+			MSSQL_Events.aAlarm[17].Raise(0);
+		-11003:// SP on DB InvalidBroachSequence
+			MSSQL_Events.wAlarm[2].8 := 1; 
+			MSSQL_Events.aAlarm[18].Raise(0);
+		-12001:// SP on DB LookUpNameNotFound
+			MSSQL_Events.wAlarm[2].9 := 1;
+			MSSQL_Events.aAlarm[19].Raise(0);
+		ELSE
+			IF PRG_MSSQL_spGetNextPartPLCData.ErrorID > 10000 THEN
+				// batch state on db undefine	
+				MSSQL_Events.wAlarm[2].21 := 1;
+				MSSQL_Events.aAlarm[47].Raise(0);
+			ELSE
+				//Req new PLC data generic error
+				MSSQL_Events.wAlarm[1].0 := 1;
+				MSSQL_Events.aAlarm[10].ipArguments.Clear().AddDInt(PRG_MSSQL_spGetNextPartPLCData.ErrorID);
+				MSSQL_Events.aAlarm[10].Raise(0);
+			END_IF
+	END_CASE
+END_IF
+
+///////////////////////////////////////////////////////////////
+IF PRG_MSSQL_UpdatePartLocationsAndProcessingData.Error THEN
+	CASE PRG_MSSQL_UpdatePartLocationsAndProcessingData.ErrorID OF
+		
+		1010://Update processin data conversion error
+			MSSQL_Events.wAlarm[2].1 := 1;
+			MSSQL_Events.aAlarm[21].Raise(0);
+	
+		1020://Update processin data execute error
+			MSSQL_Events.wAlarm[2].2 := 1;
+			MSSQL_Events.aAlarm[22].Raise(0);
+		
+		ELSE//Update processin data generic error
+			MSSQL_Events.wAlarm[2].0 := 1;
+			MSSQL_Events.aAlarm[20].ipArguments.Clear().AddDInt(PRG_MSSQL_UpdatePartLocationsAndProcessingData.ErrorID);
+			MSSQL_Events.aAlarm[20].Raise(0);
+	END_CASE
+END_IF
+
+///////////////////////////////////////////////////////////////
+IF PRG_MSSQL_spGetProcessingDataForHMI.Error THEN
+	CASE PRG_MSSQL_spGetProcessingDataForHMI.ErrorID OF
+		
+		1010://Get processin data execute error
+			MSSQL_Events.wAlarm[3].1 := 1;
+			MSSQL_Events.aAlarm[31].Raise(0);
+			
+		1020://Get processin data read error
+			MSSQL_Events.wAlarm[3].2 := 1;
+			MSSQL_Events.aAlarm[32].Raise(0);
+			
+		1040://Get processin data buffer empty
+			MSSQL_Events.wAlarm[3].3 := 1;
+			MSSQL_Events.aAlarm[33].Raise(0);
+			
+		1041://Get processin data json conversion error
+			MSSQL_Events.wAlarm[3].4 := 1;
+			MSSQL_Events.aAlarm[34].Raise(0);
+		
+		1042://Get processin data json conversion error
+			MSSQL_Events.wAlarm[3].5 := 1;
+			MSSQL_Events.aAlarm[35].Raise(0);
+				
+		ELSE//Get processin data generic error
+			MSSQL_Events.wAlarm[3].0 := 1;
+			MSSQL_Events.aAlarm[30].ipArguments.Clear().AddDInt(PRG_MSSQL_spGetProcessingDataForHMI.ErrorID);
+			MSSQL_Events.aAlarm[30].Raise(0);
+	END_CASE
+END_IF
+
+///////////////////////////////////////////////////////////////
+IF PRG_MSSQL_spCMD_AbortProduction.Error THEN
+	CASE PRG_MSSQL_spCMD_AbortProduction.ErrorID OF
+		
+		1010://sp execute error
+			MSSQL_Events.wAlarm[4].1 := 1;
+			MSSQL_Events.aAlarm[41].Raise(0);
+			
+		1020://sp failed
+			MSSQL_Events.wAlarm[4].2 := 1;
+			MSSQL_Events.aAlarm[42].Raise(0);
+		
+		ELSE//sp generic error
+			MSSQL_Events.wAlarm[4].0 := 1;
+			MSSQL_Events.aAlarm[40].ipArguments.Clear().AddDInt(PRG_MSSQL_spCMD_AbortProduction.ErrorID);
+			MSSQL_Events.aAlarm[40].Raise(0);
+	END_CASE
+END_IF
+
+//////////////////////////// HMI ///////////////////////////////////
+
+FOR i := 1 TO DB.MAX_NUMBER_ST DO
+	fbHMI_SP_Alarm[i](	Error			:= DB.HMI_SP_Alarm[i].Error,	
+						ErrorID			:= DB.HMI_SP_Alarm[i].ErrorID,			
+						aAlarm			:= ADR(MSSQL_Events.aAlarm[100]),
+						wAlarm			:= ADR(MSSQL_Events.wAlarm[10]),
+						SourceName		:= CONCAT('SP_', TO_STRING(i)),
+						TcSourceInfo	:= MSSQL_TcSourceInfo[i],
+						TcEventLogger 	:= TcEventLogger,
+						EventId			:= 50100);
+END_FOR
+
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="MAIN_SERVICE">
+      <LineId Id="170" Count="1" />
+      <LineId Id="164" Count="2" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="172" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="168" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.A_00_Init">
+      <LineId Id="76" Count="1" />
+      <LineId Id="75" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.A_10_DiagnosticTools">
+      <LineId Id="83" Count="0" />
+      <LineId Id="85" Count="1" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="2" Count="8" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="17" Count="8" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="28" Count="8" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="39" Count="8" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="61" Count="8" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="73" Count="8" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="87" Count="0" />
+      <LineId Id="89" Count="8" />
+      <LineId Id="88" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="107" Count="5" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="124" Count="0" />
+      <LineId Id="148" Count="0" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="125" Count="0" />
+      <LineId Id="117" Count="6" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="127" Count="0" />
+      <LineId Id="98" Count="3" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="48" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.A_20_Production">
+      <LineId Id="167" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="2" Count="2" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="171" Count="0" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="161" Count="5" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="81" Count="2" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="84" Count="2" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="87" Count="3" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="100" Count="2" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="157" Count="2" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="62" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.A_30_SystemTime">
+      <LineId Id="2" Count="4" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.A_92_HMI_Output">
+      <LineId Id="1196" Count="0" />
+      <LineId Id="1198" Count="0" />
+      <LineId Id="1201" Count="0" />
+      <LineId Id="1200" Count="0" />
+      <LineId Id="1202" Count="0" />
+      <LineId Id="1197" Count="0" />
+      <LineId Id="878" Count="9" />
+      <LineId Id="1245" Count="0" />
+      <LineId Id="888" Count="0" />
+      <LineId Id="1246" Count="1" />
+      <LineId Id="889" Count="18" />
+      <LineId Id="1248" Count="0" />
+      <LineId Id="908" Count="34" />
+      <LineId Id="1250" Count="1" />
+      <LineId Id="1263" Count="0" />
+      <LineId Id="1249" Count="0" />
+      <LineId Id="1253" Count="0" />
+      <LineId Id="1255" Count="7" />
+      <LineId Id="1254" Count="0" />
+      <LineId Id="1058" Count="0" />
+      <LineId Id="1060" Count="9" />
+      <LineId Id="973" Count="15" />
+      <LineId Id="1190" Count="0" />
+      <LineId Id="1189" Count="0" />
+      <LineId Id="1191" Count="0" />
+      <LineId Id="1188" Count="0" />
+      <LineId Id="993" Count="1" />
+      <LineId Id="1225" Count="0" />
+      <LineId Id="1233" Count="9" />
+      <LineId Id="1206" Count="0" />
+      <LineId Id="1226" Count="0" />
+      <LineId Id="996" Count="4" />
+      <LineId Id="1227" Count="0" />
+      <LineId Id="1215" Count="9" />
+      <LineId Id="1001" Count="0" />
+      <LineId Id="1228" Count="0" />
+      <LineId Id="1002" Count="3" />
+      <LineId Id="1192" Count="0" />
+      <LineId Id="1010" Count="1" />
+      <LineId Id="1071" Count="12" />
+      <LineId Id="1193" Count="0" />
+      <LineId Id="1244" Count="0" />
+      <LineId Id="1147" Count="0" />
+      <LineId Id="1012" Count="0" />
+      <LineId Id="1090" Count="0" />
+      <LineId Id="1243" Count="0" />
+      <LineId Id="1091" Count="9" />
+      <LineId Id="1170" Count="0" />
+      <LineId Id="1101" Count="2" />
+      <LineId Id="1111" Count="1" />
+      <LineId Id="1119" Count="8" />
+      <LineId Id="1171" Count="0" />
+      <LineId Id="1128" Count="3" />
+      <LineId Id="1136" Count="0" />
+      <LineId Id="1138" Count="0" />
+      <LineId Id="1016" Count="0" />
+      <LineId Id="1027" Count="0" />
+      <LineId Id="1173" Count="0" />
+      <LineId Id="1172" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.A_99_Alarm">
+      <LineId Id="47" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="70" Count="1" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="67" Count="1" />
+      <LineId Id="46" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.A_99_Alarm_Init">
+      <LineId Id="21" Count="0" />
+      <LineId Id="24" Count="2" />
+      <LineId Id="22" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.M_00_Init_DataRequest_Alarm">
+      <LineId Id="5" Count="0" />
+      <LineId Id="7" Count="1" />
+      <LineId Id="10" Count="2" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.M_00_Init_Marker_Alarm">
+      <LineId Id="5" Count="0" />
+      <LineId Id="7" Count="2" />
+      <LineId Id="11" Count="1" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="18" Count="2" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.M_00_Init_MSSQL_Alarm">
+      <LineId Id="167" Count="3" />
+      <LineId Id="172" Count="13" />
+      <LineId Id="376" Count="2" />
+      <LineId Id="186" Count="3" />
+      <LineId Id="56" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.M_98_DataRequest_AlarmClear">
+      <LineId Id="128" Count="0" />
+      <LineId Id="45" Count="4" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="129" Count="0" />
+      <LineId Id="43" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.M_98_Marker_AlarmClear">
+      <LineId Id="150" Count="7" />
+      <LineId Id="32" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.M_98_MSSQL_AlarmClear">
+      <LineId Id="537" Count="7" />
+      <LineId Id="309" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.M_99_DataRequest_Alarm">
+      <LineId Id="63" Count="5" />
+      <LineId Id="61" Count="1" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="43" Count="1" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="21" Count="1" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="8" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.M_99_Marker_Alarm">
+      <LineId Id="118" Count="0" />
+      <LineId Id="112" Count="1" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="119" Count="0" />
+      <LineId Id="117" Count="0" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="122" Count="3" />
+      <LineId Id="121" Count="0" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="93" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="94" Count="3" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="13" Count="1" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="89" Count="1" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="88" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="130" Count="8" />
+      <LineId Id="145" Count="1" />
+      <LineId Id="153" Count="0" />
+      <LineId Id="147" Count="5" />
+      <LineId Id="129" Count="0" />
+      <LineId Id="104" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN_SERVICE.M_99_MSSQL_Alarm">
+      <LineId Id="2011" Count="5" />
+      <LineId Id="2009" Count="1" />
+      <LineId Id="870" Count="4" />
+      <LineId Id="879" Count="9" />
+      <LineId Id="898" Count="6" />
+      <LineId Id="1953" Count="0" />
+      <LineId Id="925" Count="16" />
+      <LineId Id="2028" Count="5" />
+      <LineId Id="2037" Count="11" />
+      <LineId Id="2021" Count="4" />
+      <LineId Id="942" Count="0" />
+      <LineId Id="2020" Count="0" />
+      <LineId Id="943" Count="2" />
+      <LineId Id="2026" Count="0" />
+      <LineId Id="946" Count="32" />
+      <LineId Id="1845" Count="1" />
+      <LineId Id="979" Count="0" />
+      <LineId Id="1847" Count="0" />
+      <LineId Id="1855" Count="0" />
+      <LineId Id="1849" Count="3" />
+      <LineId Id="1856" Count="0" />
+      <LineId Id="1853" Count="1" />
+      <LineId Id="1848" Count="0" />
+      <LineId Id="980" Count="5" />
+      <LineId Id="1954" Count="0" />
+      <LineId Id="1825" Count="16" />
+      <LineId Id="448" Count="0" />
+      <LineId Id="1956" Count="0" />
+      <LineId Id="1861" Count="0" />
+      <LineId Id="1984" Count="0" />
+      <LineId Id="1958" Count="0" />
+      <LineId Id="1987" Count="6" />
+      <LineId Id="1985" Count="1" />
+      <LineId Id="1983" Count="0" />
+      <LineId Id="1862" Count="0" />
+      <LineId Id="1880" Count="12" />
+      <LineId Id="1934" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FC_MarkingLayoutSelection" Id="{90d0128c-a569-4c4c-99da-e31172dadb45}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_MarkingLayoutSelection : STRING(243)
+VAR_INPUT
+	Source	: eMarkingLayoutSource;
+	Text	: STRING;
+	MarkingCode : STRING(243);
+	ProductName : STRING(243);
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Source = eMarkingLayoutSource.ProductName THEN
+	FC_MarkingLayoutSelection := ProductName;
+ELSIF Source = eMarkingLayoutSource.FreeText THEN
+	FC_MarkingLayoutSelection := Text;
+ELSE
+	FC_MarkingLayoutSelection := MarkingCode;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FC_MarkingLayoutSelection">
+      <LineId Id="47" Count="1" />
+      <LineId Id="51" Count="1" />
+      <LineId Id="49" Count="1" />
+      <LineId Id="44" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="FB_MSSQL_spUpdateSettingRepositoryByName" Id="{9ddf049c-107f-444c-ba08-34d3682502b3}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_MSSQL_spUpdateSettingRepositoryByName
+VAR_INPUT
+	Execute					: BOOL;
+	Enable					: BOOL;
+	Reset					: BOOL;
+	Name					: STRING(50);
+	JsonValue				: STRING(db.MAX_STRING_SIZE);
+END_VAR
+VAR_OUTPUT
+	Error					: BOOL;
+	ErrorID					: DINT;
+	Done					: BOOL;
+	Busy					: BOOL;
+	tcMessage 				: I_TcMessage;
+	Q_tElapsedTime			: TIME;
+	Result					: STRING(DB.MAX_STRING_SIZE);
+END_VAR
+VAR
+	RTRIG_Execute			: R_TRIG;
+	RTRIG_Reset				: R_TRIG;
+	iState					: INT := -1;
+	TON_Read				: TON;
+	Parameters				: DUT_UpdateSettingRepositoryByName;
+END_VAR
+VAR_IN_OUT
+	fbSQLResult				: FB_SQLResultEvt;
+	fbSQLStoredProcedure	: FB_SQLStoredProcedureEvt;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RTRIG_Reset(CLK := Reset);
+IF RTRIG_Reset.Q AND Execute AND Error AND NOT Busy THEN
+	Execute := FALSE;
+END_IF
+
+Parameters.Name := Name;
+Parameters.JsonValue := JsonValue;
+
+RTRIG_Execute(CLK := Execute AND Enable);
+IF(RTRIG_Execute.Q) THEN
+	 Done							:= FALSE;
+	 Error							:= FALSE;
+	 ErrorID						:= 0;
+	 
+	 iState							:= 0;
+ELSIF NOT Execute AND NOT Busy THEN
+	Busy			:= FALSE;
+	Done			:= FALSE;
+	Error			:= FALSE;
+	
+	iState := -1;
+END_IF
+ 
+ // Elapsed Time
+ TON_Read(PT:= T#5S);
+ 
+ CASE iState OF
+ 
+	 0:
+	 		TON_Read.IN 						:= FALSE;
+			Busy								:= TRUE;
+			iState 								:= 10;
+		
+	10:
+		IF fbSQLStoredProcedure.ExecuteDataReturn(pParameterStrc := ADR(Parameters), cbParameterStrc := SIZEOF(Parameters), pSQLDBResult := ADR(fbSqlResult)) THEN
+			TON_Read.IN := TRUE;
+			IF fbSQLStoredProcedure.bError THEN
+				tcMessage := fbSQLStoredProcedure.ipTcResult;
+				
+				iState 							:= 1010;
+			ELSE
+				iState 							:= 999;
+			END_IF    
+		END_IF
+		
+	20:
+		IF fbSQLResult.Read(0, fbSQLResult.nDataCount, ADR(Result), SIZEOF(Result), FALSE, TRUE) THEN
+			IF fbSQLResult.bError THEN
+				iState 							:= 1020;
+			ELSE
+				
+				iState 							:= 30;
+			END_IF
+		END_IF
+		
+	30: 
+		IF fbSQLResult.Release() THEN
+			iState 								:= 999;	
+		END_IF
+		
+	999:
+		TON_Read.IN 	:= FALSE;
+		Done			:= TRUE;
+		Busy			:= FALSE;
+		
+ END_CASE 
+ 
+IF iState > 1000 THEN
+	Error 		:= TRUE;
+	ErrorID	 	:= iState;
+	Busy	 	:= FALSE;
+	TON_Read.IN := FALSE;
+	iState := -1;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_MSSQL_spUpdateSettingRepositoryByName">
+      <LineId Id="462" Count="2" />
+      <LineId Id="460" Count="1" />
+      <LineId Id="365" Count="67" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

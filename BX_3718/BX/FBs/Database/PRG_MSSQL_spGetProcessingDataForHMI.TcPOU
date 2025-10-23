@@ -1,0 +1,278 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+  <POU Name="PRG_MSSQL_spGetProcessingDataForHMI" Id="{fbac57cd-08ec-4f51-986d-28d04de91d5d}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_MSSQL_spGetProcessingDataForHMI
+VAR_INPUT
+	Execute					: BOOL;
+	Enable					: BOOL;
+END_VAR
+VAR_OUTPUT
+	Error					: BOOL;
+	ErrorID					: DINT;
+	Done					: BOOL;
+	Busy					: BOOL;
+	tcMessage 				: I_TcMessage;
+	Q_tElapsedTime			: TIME;
+	Buffer					: STRING(DB.MAX_STRING_SIZE);
+	ProcessingHMIDataLocation	: ARRAY[0..CNC.NUM_DATA_POSITION] OF DUT_stProcessingHMIData1;
+	ProcessingHMIDataViewData	: ARRAY[0..CNC.NUM_DATA_POSITION] OF DUT_stProcessingHMIData2;
+END_VAR
+VAR
+	RTRIG_Execute			: R_TRIG;
+	iState					: INT := -1;	
+	fbJsonDataType 			: FB_JsonReadWriteDataType;
+	TempArr					: ARRAY[0..2] OF STRING(DB.MAX_STRING_SIZE);
+	Lenght					: UDINT;
+	TempSeparetor			: ARRAY[0..1] OF STRING(15);
+	TempEnd					: STRING(1);
+	hr						: HRESULT;
+	i						: UINT;
+	fbTempWrite				: FB_WriteTestFile;
+	fbFileRename : FB_FileRename;
+	tempString1	: T_MaxString;
+	tempString2	: T_MaxString;
+	tempString3	: T_MaxString;
+END_VAR
+VAR_IN_OUT
+	fbSQLResult				: FB_SQLResultEvt;
+	fbSQLStoredProcedure	: FB_SQLStoredProcedureEvt;
+	Parameters		: DUT_ProcessingDataForHMI;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[fbTempWrite(sData := Parameters.ProcessingData,
+			sNetId := EC.sNetId,
+			sPathName := 'C:\GSCNext\UtilityBAT\fileTest.txt');
+tempString3 := FC_myDTtoString(TO_STRING(G.SystemTime));
+tempString1 := CONCAT('C:\GSCNext\UtilityBAT\fileTest', tempString3);
+tempString2 := CONCAT(tempString1, '.txt');		
+fbFileRename(
+    sNetId   := EC.sNetId,
+    sOldName := 'C:\GSCNext\UtilityBAT\fileTest.txt',
+    sNewName := tempString2,
+    ePath    := PATH_GENERIC,
+    tTimeout := DEFAULT_ADS_TIMEOUT
+);
+
+RTRIG_Execute(CLK := Execute AND Enable);
+IF(RTRIG_Execute.Q) THEN
+	 Done							:= FALSE;
+	 Error							:= FALSE;
+	 ErrorID						:= 0; 
+	 MEMSET(ADR(ProcessingHMIDataLocation),0,SIZEOF(ProcessingHMIDataLocation));
+	 MEMSET(ADR(ProcessingHMIDataViewData),0,SIZEOF(ProcessingHMIDataViewData));
+	 MEMSET(ADR(TempArr), 0, SIZEOF(TempArr));
+
+	 iState							:= 0;
+ELSIF NOT Execute AND NOT Busy THEN
+	Busy			:= FALSE;
+	Done			:= FALSE;
+	Error			:= FALSE;
+	
+	iState := -1;
+END_IF
+CASE iState OF
+	
+	 0:
+		Busy								:= TRUE;
+		iState 								:= 10;
+		
+	10:
+		IF fbSQLStoredProcedure.ExecuteDataReturn(pParameterStrc := ADR(Parameters), cbParameterStrc := SIZEOF(Parameters), pSQLDBResult := ADR(fbSqlResult)) THEN
+			IF fbSQLStoredProcedure.bError THEN
+				tcMessage := fbSQLStoredProcedure.ipTcResult;
+				iState 							:= 1010; 
+			ELSE	
+				iState 							:= 30; 
+			END_IF    
+		END_IF
+		
+	20:
+		IF fbSQLResult.Read(0, fbSQLResult.nDataCount, ADR(Buffer), SIZEOF(Buffer), FALSE, TRUE) THEN
+			IF fbSQLResult.bError THEN
+				iState 							:= 1020;
+			ELSE
+				
+				iState 							:= 30;
+			END_IF
+		END_IF
+		
+	30: 
+		IF fbSQLResult.Release() THEN
+			iState 								:= 90;		
+		END_IF
+		
+	40:	
+		//Buffer := '[{"LocationId":0,"PartId":7,"ViewData":{"ProductName":"Ankerslot","BatchName":"PRD0000001","RowIndex":"1","RowRunningNo":"7","RowQty":"10","OrderReference":"PRD0000001","Profile":"D0U12","Status":"Fetched","RunningNoOverRowQty":"7\/10"}},{"LocationId":1,"PartId":6,"ViewData":{"ProductName":"Ankerslot","BatchName":"PRD0000001","RowIndex":"1","RowRunningNo":"6","RowQty":"10","OrderReference":"PRD0000001","Profile":"D0U12","Status":"Processing","RunningNoOverRowQty":"6\/10"}},{"LocationId":2,"PartId":5,"ViewData":{"ProductName":"Ankerslot","BatchName":"PRD0000001","RowIndex":"1","RowRunningNo":"5","RowQty":"10","OrderReference":"PRD0000001","Profile":"D0U12","Status":"Processing","RunningNoOverRowQty":"5\/10"}},{"LocationId":3,"PartId":4,"ViewData":{"ProductName":"Ankerslot","BatchName":"PRD0000001","RowIndex":"1","RowRunningNo":"4","RowQty":"10","OrderReference":"PRD0000001","Profile":"D0U12","Status":"Processing","RunningNoOverRowQty":"4\/10"}},{"LocationId":4,"PartId":0},{"LocationId":4,"PartId":0},{"LocationId":5,"PartId":0}]';
+
+		//Lenght := LEN2(ADR(Buffer));
+		Lenght := LEN2(ADR(Parameters.ProcessingData));
+		IF Lenght <= 0 THEN 
+			iState 								:= 1040;	
+			RETURN;
+		END_IF
+		
+		// Rimuove il primo carattere '['
+		DELETE2(ADR(Parameters.ProcessingData),ADR(TempArr[0]), DB.MAX_STRING_SIZE, 1, 1);
+		
+		// Rimuove l'ultimo carattere ']'
+		DELETE2(ADR(TempArr[0]),ADR(TempArr[0]), DB.MAX_STRING_SIZE, 1, Lenght - 1);
+		
+		TempEnd := '}';	
+		TempSeparetor[0] := '},';	
+		TempSeparetor[1] := '"ViewData":';		
+		FOR i := 0 TO CNC.NUM_DATA_POSITION DO
+			// Estrai singolo oggetto JSON: "LocationId":0,"PartId":0}
+			FindAndSplit(ADR(TempSeparetor[0]),ADR(TempArr[0]),ADR(TempArr[0]),DB.MAX_STRING_SIZE,ADR(TempArr[1]), DB.MAX_STRING_SIZE,FALSE);
+			
+			// Estrai solo la parte ViewData da TempArr[0] solo se presente
+			IF FIND2(ADR(TempArr[0]),ADR(TempSeparetor[1])) <> 0 THEN
+				FindAndSplit(ADR(TempSeparetor[1]),ADR(TempArr[0]),ADR(TempArr[0]),DB.MAX_STRING_SIZE,ADR(TempArr[2]), DB.MAX_STRING_SIZE,FALSE);
+			END_IF
+			
+			Lenght := LEN2(ADR(TempArr[0]));
+			IF Lenght > 0 THEN
+				IF i <> CNC.NUM_DATA_POSITION THEN
+					
+					 // Se termina con virgola la rimuove
+					IF TempArr[0][Lenght-1] = 44 THEN
+						DELETE2(ADR(TempArr[0]),ADR(TempArr[0]), DB.MAX_STRING_SIZE, 1, Lenght);
+					END_IF
+					
+					// Se non termina con graffa, l'aggiunge
+					IF TempArr[0][Lenght-1] <> 125 THEN
+						CONCAT2(ADR(TempArr[0]),ADR(TempEnd),ADR(TempArr[0]), DB.MAX_STRING_SIZE);
+					END_IF
+				END_IF		
+				
+				fbJsonDataType.SetSymbolFromJson(TempArr[0],'DUT_stProcessingHMIData1', SIZEOF(ProcessingHMIDataLocation[i]), ADR(ProcessingHMIDataLocation[i]), hrErrorCode => hr);
+				IF NOT SUCCEEDED(hr) THEN
+					iState 								:= 1041;				
+					RETURN;
+				END_IF
+				
+				// Solo se esiste ViewData lo converto in DUT
+				Lenght := LEN2(ADR(TempArr[2]));
+				IF Lenght <> 0 THEN
+					IF TempArr[2][Lenght-1] = 125 AND TempArr[2][Lenght-2] = 125 THEN
+						DELETE2(ADR(TempArr[2]),ADR(TempArr[2]), DB.MAX_STRING_SIZE, 1, Lenght);
+					END_IF
+					fbJsonDataType.SetSymbolFromJson(TempArr[2],'DUT_stProcessingHMIData2', SIZEOF(ProcessingHMIDataViewData[i]), ADR(ProcessingHMIDataViewData[i]), hrErrorCode => hr);
+					IF NOT SUCCEEDED(hr) THEN
+						iState 								:= 120;
+						RETURN;
+					END_IF
+				END_IF
+				
+				Lenght := LEN2(ADR(TempArr[1]));
+				IF Lenght = 0 THEN
+					EXIT;
+				END_IF
+				// Preparazione per il prossimo ciclo
+				TempArr[0] := TempArr[1];
+				TempArr[1] := '';
+				TempArr[2] := '';
+			ELSE
+				EXIT;
+			END_IF
+		END_FOR
+		
+		iState 								:= 999;	
+
+	90:
+		fbTempWrite.Execute := TRUE;
+		IF fbTempWrite.Done THEN
+			fbTempWrite.Execute := FALSE;
+			iState 								:= 40;	
+		ELSIF fbTempWrite.Error THEN
+			fbTempWrite.Execute := FALSE;
+			iState 								:= 1043;
+		END_IF	
+		
+	120:
+		fbFileRename.bExecute := TRUE;
+		IF fbFileRename.bBusy THEN
+			iState 								:= 121;	
+		END_IF
+
+	121:
+		IF NOT  fbFileRename.bBusy THEN
+			fbFileRename.bExecute := FALSE;
+			iState 								:= 1042;
+		ELSIF fbFileRename.bError THEN
+			iState 								:= 1044;
+		END_IF
+		
+		
+	999:
+		Done			:= TRUE;
+		Busy			:= FALSE;
+		
+END_CASE 
+ 
+IF iState > 1000 THEN
+	Error 		:= TRUE;
+	ErrorID	 	:= iState; 
+	Busy	 	:= FALSE;
+	iState := -1;
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="PRG_MSSQL_spGetProcessingDataForHMI">
+      <LineId Id="4593" Count="1" />
+      <LineId Id="4591" Count="0" />
+      <LineId Id="4622" Count="0" />
+      <LineId Id="4610" Count="0" />
+      <LineId Id="4624" Count="0" />
+      <LineId Id="4611" Count="0" />
+      <LineId Id="4616" Count="3" />
+      <LineId Id="4613" Count="0" />
+      <LineId Id="4612" Count="0" />
+      <LineId Id="4592" Count="0" />
+      <LineId Id="4286" Count="7" />
+      <LineId Id="4295" Count="8" />
+      <LineId Id="4308" Count="2" />
+      <LineId Id="4312" Count="1" />
+      <LineId Id="4713" Count="1" />
+      <LineId Id="4717" Count="0" />
+      <LineId Id="4318" Count="1" />
+      <LineId Id="4321" Count="21" />
+      <LineId Id="4426" Count="2" />
+      <LineId Id="4559" Count="0" />
+      <LineId Id="4429" Count="0" />
+      <LineId Id="4488" Count="0" />
+      <LineId Id="4430" Count="14" />
+      <LineId Id="4524" Count="0" />
+      <LineId Id="4445" Count="7" />
+      <LineId Id="4526" Count="0" />
+      <LineId Id="4453" Count="3" />
+      <LineId Id="4525" Count="0" />
+      <LineId Id="4457" Count="4" />
+      <LineId Id="4527" Count="0" />
+      <LineId Id="4462" Count="1" />
+      <LineId Id="4489" Count="0" />
+      <LineId Id="4464" Count="5" />
+      <LineId Id="4675" Count="1" />
+      <LineId Id="4674" Count="0" />
+      <LineId Id="4470" Count="1" />
+      <LineId Id="4492" Count="0" />
+      <LineId Id="4472" Count="3" />
+      <LineId Id="4477" Count="3" />
+      <LineId Id="4487" Count="0" />
+      <LineId Id="4481" Count="5" />
+      <LineId Id="4363" Count="2" />
+      <LineId Id="4597" Count="8" />
+      <LineId Id="4596" Count="0" />
+      <LineId Id="4607" Count="2" />
+      <LineId Id="4626" Count="2" />
+      <LineId Id="4631" Count="0" />
+      <LineId Id="4629" Count="0" />
+      <LineId Id="4632" Count="1" />
+      <LineId Id="4635" Count="2" />
+      <LineId Id="4634" Count="0" />
+      <LineId Id="4630" Count="0" />
+      <LineId Id="4366" Count="1" />
+      <LineId Id="4369" Count="8" />
+      <LineId Id="4379" Count="0" />
+      <LineId Id="3300" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

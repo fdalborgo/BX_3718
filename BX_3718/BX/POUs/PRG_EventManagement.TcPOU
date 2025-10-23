@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="PRG_EventManagement" Id="{b378484f-6b9f-4402-a8db-35a9e4ce4e25}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_EventManagement
+VAR
+	// CNC  Alarms
+	_FanucCNCActiveEventList AT %MB100: ARRAY [1..NUM_MAX_CNC_ACTIVE_EVENTS] OF U_FanucCNCEventEntry;
+	_FanucCNCEventSourceList AT %MB21000 : ST_FanucCNCEventSourceList;
+	_CheckFanucCNCActiveAlarmList : FB_CheckFanucCNCActiveEvents (CheckInterval := T#1S, 
+																  CurrentCNCActiveEventList := _FanucCNCActiveEventList,
+																  CNCEventSourceList := _FanucCNCEventSourceList);
+																  
+   _bEvents_InitDone 	: BOOL := FALSE;
+   	iEvents_InitIndex 	: INT  := 0;
+	iEvents_ClearIndex 	: INT  := 0;
+	RTRIG_ClearEvents 	: R_TRIG;
+	
+	FanucPMCActiveAlarms AT %MB600: ARRAY [0..NUM_PMC_EVENTS / 8 - 1] OF BYTE;
+	_PMCEventCollectors : FB_PMCEventCollectors(CheckInterval := T#1S, CurrentPMCActiveAlarmList := FanucPMCActiveAlarms);
+	
+	TestInt1 : UINT;
+	TestInt2 : UINT;
+	TestInt3 : UINT;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+IF NOT _bEvents_InitDone THEN
+	_PMCEventCollectors.Enabled := TRUE;
+	_bEvents_InitDone := TRUE;
+ELSE
+	
+// Monitor CNC Alarms
+	_CheckFanucCNCActiveAlarmList(Enabled := TRUE);
+	_PMCEventCollectors();
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="PRG_EventManagement">
+      <LineId Id="104" Count="8" />
+      <LineId Id="30" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

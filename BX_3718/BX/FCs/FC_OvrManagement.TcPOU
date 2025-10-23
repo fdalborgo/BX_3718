@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="FC_OvrManagement" Id="{0b599ed5-89b6-46bd-b89a-4a3bc38be01e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_OvrManagement : UINT
+VAR_INPUT
+	X_min 			: UINT;
+    X_max 			: UINT;
+    Y_min 			: UINT;
+    Y_max 			: UINT;
+	Counter			: UINT;
+	SetCounterDone 	: BOOL;
+END_VAR
+VAR_OUTPUT
+	SetCounte 		: BOOL;
+	SetCounteValue 	: UINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT SetCounterDone THEN
+	IF Counter < X_min THEN
+		SetCounteValue := X_min;
+		SetCounte := TRUE;
+	ELSIF Counter > X_max THEN
+		SetCounteValue := X_max;
+		SetCounte := TRUE;
+	ELSE
+		FC_OvrManagement := (((Counter - X_min) * (Y_max - Y_min)) / (X_max - X_min) + Y_min);
+	END_IF
+ELSIF SetCounte THEN
+	SetCounte := FALSE;
+END_IF
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FC_OvrManagement">
+      <LineId Id="92" Count="0" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="86" Count="5" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="93" Count="2" />
+      <LineId Id="69" Count="4" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

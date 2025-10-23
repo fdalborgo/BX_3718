@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <Itf Name="I_EventDetailer" Id="{6f69f0dc-e3bf-4582-9e64-540faae44557}">
+    <Declaration><![CDATA[INTERFACE I_EventDetailer
+]]></Declaration>
+    <Method Name="GetDetail" Id="{44338422-a1ab-455f-bb4e-b66cc24ed120}">
+      <Declaration><![CDATA[METHOD GetDetail : STRING(255)
+VAR_INPUT
+	TcAlarm : REFERENCE TO FB_TcAlarm;
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

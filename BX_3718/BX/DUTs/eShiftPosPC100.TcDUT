@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <DUT Name="eShiftPosPC100" Id="{b94d0cfb-a9bc-46a8-bd99-616aba2e1402}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE eShiftPosPC100 :
+(
+	eSt2b := 0,
+	eSt2c := 1,
+	eSt2d := 2
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

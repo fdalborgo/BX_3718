@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FanucCNCEventSourceList" Id="{0310140d-9dc7-46fc-b96c-e88076effb37}">
+    <Declaration><![CDATA[TYPE ST_FanucCNCEventSourceList :
+STRUCT
+	FanucCNCSources : ARRAY [1..NUM_MAX_CNC_EVENT_SOURCES] OF ST_FanucCNCEventSourceInfo;
+	HashMD5 : ARRAY[0..15] OF BYTE;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
