@@ -20,15 +20,6 @@
 			</ArrayInfo>
 		</DataType>
 		<DataType>
-			<Name GUID="{C30EECB5-6A2C-2F2C-8AD8-FAF1F335D4B6}" IecBaseType="true" AutoDeleteType="true">ARRAY [0..4] OF UINT</Name>
-			<BitSize>80</BitSize>
-			<BaseType GUID="{18071995-0000-0000-0000-000000000005}">UINT</BaseType>
-			<ArrayInfo>
-				<LBound>0</LBound>
-				<Elements>5</Elements>
-			</ArrayInfo>
-		</DataType>
-		<DataType>
 			<Name GUID="{A4D755F2-9C07-8B98-9C7E-2BC1A07A8FC9}" IecBaseType="true" AutoDeleteType="true">ARRAY [0..5] OF UINT</Name>
 			<BitSize>96</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000005}">UINT</BaseType>
@@ -1398,7 +1389,7 @@
 		</System>
 		<Plc>
 			<Project GUID="{33E39A89-D1FE-403F-9BD1-7237B2DDED94}" Name="BX" PrjFilePath="BX\BX.plcproj" TmcFilePath="BX\BX.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcPath="BX\BX.tmc" TmcHash="{E11A3041-2DDC-EEBE-8C95-318347F5857D}">
+				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcPath="BX\BX.tmc" TmcHash="{30995FD9-6805-1722-A249-8929DCEFC3FE}">
 					<Name>BX Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="1">
@@ -1455,7 +1446,7 @@
 						<Var>
 							<Name>EC.AL671</Name>
 							<Comment><![CDATA[ EV1-EV27]]></Comment>
-							<Type GUID="{C30EECB5-6A2C-2F2C-8AD8-FAF1F335D4B6}">ARRAY [0..4] OF UINT</Type>
+							<Type GUID="{A4D755F2-9C07-8B98-9C7E-2BC1A07A8FC9}">ARRAY [0..5] OF UINT</Type>
 						</Var>
 						<Var>
 							<Name>EC.AL673</Name>
@@ -1486,13 +1477,13 @@
 							<InOut>7</InOut>
 						</Var>
 						<Var>
-							<Name>G.LoadingModeActive</Name>
-							<Type GUID="{5006D085-4C17-87CB-AA4B-A3399E9406FE}">eLoadingMode</Type>
+							<Name>G.WID_Old</Name>
+							<Type>DINT</Type>
 							<InOut>7</InOut>
 						</Var>
 						<Var>
-							<Name>G.WID_Old</Name>
-							<Type>DINT</Type>
+							<Name>G.LoadingModeActive</Name>
+							<Type GUID="{5006D085-4C17-87CB-AA4B-A3399E9406FE}">eLoadingMode</Type>
 							<InOut>7</InOut>
 						</Var>
 						<Var>
@@ -1501,14 +1492,14 @@
 							<InOut>7</InOut>
 						</Var>
 						<Var>
-							<Name>HMI.SelectedLoadingMode</Name>
-							<Type GUID="{5006D085-4C17-87CB-AA4B-A3399E9406FE}">eLoadingMode</Type>
-							<InOut>7</InOut>
-						</Var>
-						<Var>
 							<Name>HMI.ShiftData</Name>
 							<Comment><![CDATA[ Shifting Data from CNC]]></Comment>
 							<Type GUID="{4F1F9557-82CB-FFA6-F32A-D3CB2A3C4DA6}">ARRAY [0..20] OF stShiftData</Type>
+							<InOut>7</InOut>
+						</Var>
+						<Var>
+							<Name>HMI.SelectedLoadingMode</Name>
+							<Type GUID="{5006D085-4C17-87CB-AA4B-A3399E9406FE}">eLoadingMode</Type>
 							<InOut>7</InOut>
 						</Var>
 						<Var>
@@ -1554,13 +1545,13 @@
 					<Vars VarGrpType="8" ContextId="1" AreaNo="20">
 						<Name>ServiceTask Retains</Name>
 						<Var>
-							<Name>G.filesList</Name>
-							<Type GUID="{8FB1336E-C222-700C-2128-CD0A2D390752}">ARRAY [0..99] OF STRING(80)</Type>
+							<Name>G.filesNumb</Name>
+							<Type>UINT</Type>
 							<InOut>7</InOut>
 						</Var>
 						<Var>
-							<Name>G.filesNumb</Name>
-							<Type>UINT</Type>
+							<Name>G.filesList</Name>
+							<Type GUID="{8FB1336E-C222-700C-2128-CD0A2D390752}">ARRAY [0..99] OF STRING(80)</Type>
 							<InOut>7</InOut>
 						</Var>
 						<Var>
@@ -8268,6 +8259,7 @@ Submodule Info: 200 Byte Output
 				<Link VarA="PlcTask Outputs^EC.AL671[2]" VarB="Module 1 (VAEM-L1-S-24-PT [48DO])^Outputs^C3 Output"/>
 				<Link VarA="PlcTask Outputs^EC.AL671[3]" VarB="Module 1 (VAEM-L1-S-24-PT [48DO])^Outputs^C4 Output"/>
 				<Link VarA="PlcTask Outputs^EC.AL671[4]" VarB="Module 1 (VAEM-L1-S-24-PT [48DO])^Outputs^C5 Output"/>
+				<Link VarA="PlcTask Outputs^EC.AL671[5]" VarB="Module 1 (VAEM-L1-S-24-PT [48DO])^Outputs^C6 Output"/>
 			</OwnerB>
 			<OwnerB Name="TIID^LAN 1 (EtherCAT)^AL673 (CTEU-EtherCAT Modular)">
 				<Link VarA="PlcTask Outputs^EC.AL673[0]" VarB="Module 1 (VAEM-L1-S-24-PT [48DO])^Outputs^C1 Output"/>

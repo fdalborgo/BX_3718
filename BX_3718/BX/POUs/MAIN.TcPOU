@@ -167,13 +167,14 @@ AL671[1] := I_Y400[1];
 AL671[2] := I_Y400[2];
 AL671[3] := I_Y400[3];
 AL671[4] := I_Y400[4];
+AL671[5] := I_Y400[5];
             
-AL673[0] := I_Y400[5];
-AL673[1] := I_Y400[6];
-AL673[2] := I_Y400[7];
-AL673[3] := I_Y400[8];
-AL673[4] := I_Y400[9];
-AL673[5] := I_Y400[10];
+AL673[0] := I_Y400[6];
+AL673[1] := I_Y400[7];
+AL673[2] := I_Y400[8];
+AL673[3] := I_Y400[9];
+AL673[4] := I_Y400[10];
+AL673[5] := I_Y400[11];
 
 ////////////////////////////////////////////////////////// Memorie R
 
@@ -1488,9 +1489,12 @@ MEMCPY(ADR(CNC.HS_write[9]), ADR(DataRequestWrite.aDWord), SIZEOF(DWORD));
       <LineId Id="19" Count="0" />
       <LineId Id="96" Count="2" />
       <LineId Id="103" Count="1" />
-      <LineId Id="99" Count="3" />
+      <LineId Id="205" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="101" Count="1" />
       <LineId Id="72" Count="0" />
       <LineId Id="105" Count="1" />
+      <LineId Id="206" Count="0" />
       <LineId Id="126" Count="0" />
       <LineId Id="125" Count="0" />
       <LineId Id="163" Count="0" />

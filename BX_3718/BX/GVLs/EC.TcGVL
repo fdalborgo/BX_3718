@@ -14,7 +14,7 @@ VAR_GLOBAL
 	ProfiNET_DevState AT %I* : UINT;
 
 // FESTO	
-	AL671 AT %Q* : ARRAY[0..4] OF UINT; // EV1-EV27
+	AL671 AT %Q* : ARRAY[0..5] OF UINT; // EV1-EV27
 	AL673 AT %Q* : ARRAY[0..5] OF UINT; // EV28-EV55
 	
 // Override 
